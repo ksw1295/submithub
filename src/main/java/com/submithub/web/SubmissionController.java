@@ -1,0 +1,85 @@
+package com.submithub.web;
+
+import com.submithub.security.AppUser;
+import com.submithub.service.AssignmentService;
+import com.submithub.service.BusinessException;
+import com.submithub.service.SubmissionService;
+import com.submithub.storage.UploadProcessor.Upload;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+@Controller
+public class SubmissionController {
+
+    private final SubmissionService submissionService;
+    private final AssignmentService assignmentService;
+
+    public SubmissionController(SubmissionService submissionService, AssignmentService assignmentService) {
+        this.submissionService = submissionService;
+        this.assignmentService = assignmentService;
+    }
+
+    @PostMapping("/assignments/{id}/submit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public String submit(@PathVariable Long id, @AuthenticationPrincipal AppUser user,
+                         @RequestParam(value = "files", required = false) List<MultipartFile> files,
+                         @RequestParam(value = "message", required = false) String message,
+                         RedirectAttributes redirect) {
+        List<Upload> uploads = new ArrayList<>();
+        try {
+            for (MultipartFile f : files == null ? List.<MultipartFile>of() : files) {
+                if (!f.isEmpty()) {
+                    uploads.add(new Upload(f.getOriginalFilename(), f.getBytes()));
+                }
+            }
+        } catch (IOException e) {
+            throw new BusinessException("업로드한 파일을 읽지 못했습니다.");
+        }
+        var result = submissionService.submit(id, user, uploads, message);
+        redirect.addFlashAttribute("message", "v" + result.versionNo() + " 제출이 완료되었습니다."
+                + (result.late() ? " (지각 제출)" : ""));
+        return "redirect:/submissions/" + result.id();
+    }
+
+    @GetMapping("/assignments/{aid}/students/{sid}")
+    public String history(@PathVariable Long aid, @PathVariable Long sid, @AuthenticationPrincipal AppUser user,
+                          Model model) {
+        model.addAttribute("history", submissionService.history(aid, sid, user));
+        return "submissions/history";
+    }
+
+    @GetMapping("/submissions/{id}")
+    public String view(@PathVariable Long id, @RequestParam(value = "file", required = false) Long fileId,
+                       @AuthenticationPrincipal AppUser user, Model model) {
+        model.addAttribute("sub", submissionService.view(id, fileId, user));
+        return "submissions/view";
+    }
+
+    @GetMapping("/files/{id}/download")
+    public ResponseEntity<byte[]> download(@PathVariable Long id, @AuthenticationPrincipal AppUser user) {
+        var d = submissionService.download(id, user);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(d.filename(), StandardCharsets.UTF_8).build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(d.bytes());
+    }
+}

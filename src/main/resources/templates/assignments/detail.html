@@ -33,6 +33,69 @@
             </dl>
         </div>
     </div>
+
+    <!-- 학생: 제출 -->
+    <div sec:authorize="hasRole('STUDENT')">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header"><strong>제출하기</strong></div>
+            <div class="card-body">
+                <div class="alert alert-secondary mb-0" th:if="${!assignment.open}">제출 기한이 지났습니다.</div>
+                <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit(id=${assignment.id})}" method="post" enctype="multipart/form-data">
+                    <div class="alert alert-warning" th:if="${assignment.pastDue}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
+                    <div class="mb-3">
+                        <label class="form-label" for="files">파일 또는 zip (여러 개 선택 가능)</label>
+                        <input class="form-control" type="file" id="files" name="files" multiple required>
+                        <div class="form-text">제출할 때마다 새 버전이 쌓이고, 이전 버전은 그대로 보관됩니다.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="message">제출 메모 <small class="text-muted">(커밋 메시지처럼 이번 버전에서 무엇을 바꿨는지)</small></label>
+                        <input class="form-control" id="message" name="message" maxlength="500" placeholder="예: 리뷰 반영해서 null 체크 추가">
+                    </div>
+                    <button class="btn btn-primary" type="submit">제출</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header"><strong>내 제출 이력</strong> <span class="text-muted" th:text="${#lists.size(history.versions)} + '개 버전'"></span></div>
+            <div class="card-body" th:if="${#lists.isEmpty(history.versions)}"><span class="text-muted">아직 제출하지 않았습니다.</span></div>
+            <th:block th:unless="${#lists.isEmpty(history.versions)}" th:replace="~{submissions/fragments :: timeline(${history})}"></th:block>
+        </div>
+    </div>
+
+    <!-- 교수: 제출 현황 -->
+    <div sec:authorize="hasRole('PROFESSOR')">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>제출 현황</strong>
+                <span class="text-muted small" th:with="done=${#lists.size(status.?[submitted])}"
+                      th:text="'제출 ' + ${done} + ' / 수강 ' + ${#lists.size(status)} + '명'"></span>
+            </div>
+            <div class="card-body" th:if="${#lists.isEmpty(status)}"><span class="text-muted">수강생이 없습니다.</span></div>
+            <div class="table-responsive" th:unless="${#lists.isEmpty(status)}">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>학생</th><th>학번</th><th>최신 버전</th><th>제출 시각</th><th>상태</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="s : ${status}">
+                        <td th:text="${s.name}">이름</td>
+                        <td th:text="${s.studentNo}">학번</td>
+                        <td><span th:if="${s.submitted}" th:text="'v' + ${s.latestVersion} + ' (총 ' + ${s.versions} + '개)'"></span></td>
+                        <td th:text="${s.submittedAt != null} ? ${#temporals.format(s.submittedAt, 'MM-dd HH:mm')} : ''"></td>
+                        <td>
+                            <span class="badge text-bg-secondary" th:unless="${s.submitted}">미제출</span>
+                            <span class="badge text-bg-success" th:if="${s.submitted and !s.late}">제출</span>
+                            <span class="badge text-bg-warning" th:if="${s.submitted and s.late}">지각</span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" th:if="${s.submitted}"
+                               th:href="@{/assignments/{a}/students/{s}(a=${assignment.id},s=${s.studentId})}">이력 보기</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </main>
 </body>
 </html>

@@ -4,6 +4,7 @@ import com.submithub.core.text.TextDecoder;
 import com.submithub.domain.Assignment;
 import com.submithub.domain.AssignmentRepository;
 import com.submithub.domain.Course;
+import com.submithub.domain.SubmissionRepository;
 import com.submithub.security.AppUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +20,13 @@ public class AssignmentService {
     static final Duration DUE_SOON = Duration.ofHours(48);
 
     private final AssignmentRepository assignments;
+    private final SubmissionRepository submissions;
     private final AccessService access;
 
-    public AssignmentService(AssignmentRepository assignments, AccessService access) {
+    public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
+                             AccessService access) {
         this.assignments = assignments;
+        this.submissions = submissions;
         this.access = access;
     }
 
@@ -60,9 +64,23 @@ public class AssignmentService {
     public List<AssignmentRow> rowsFor(Course course, AppUser user) {
         LocalDateTime now = LocalDateTime.now();
         return assignments.findByCourseIdOrderByDueAtAsc(course.getId()).stream()
-                .map(a -> new AssignmentRow(a.getId(), a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(),
-                        user.isProfessor() ? "" : stateOf(a, now), 0))
+                .map(a -> row(a, user, now))
                 .toList();
+    }
+
+    private AssignmentRow row(Assignment a, AppUser user, LocalDateTime now) {
+        String state = "";
+        int versions = 0;
+        if (!user.isProfessor()) {
+            state = stateOf(a, now);
+            var latest = submissions.findTopByAssignmentIdAndStudentIdOrderByVersionNoDesc(a.getId(), user.getId());
+            if (latest.isPresent()) {
+                versions = latest.get().getVersionNo();
+                state = latest.get().isLate() ? "LATE" : "SUBMITTED";
+            }
+        }
+        return new AssignmentRow(a.getId(), a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(),
+                state, versions);
     }
 
     static String stateOf(Assignment a, LocalDateTime now) {

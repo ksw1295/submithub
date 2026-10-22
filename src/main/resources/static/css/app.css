@@ -2,3 +2,20 @@ body { background: #f6f7f9; }
 .card { border-color: #e3e6ea; }
 code, pre, .code { font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
 .table > :not(caption) > * > * { vertical-align: middle; }
+
+/* 코드 보기 */
+table.code-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+table.code-table td { padding: 0 8px; vertical-align: top; }
+table.code-table td.ln {
+    width: 1%; min-width: 48px; text-align: right; color: #8c959f; user-select: none;
+    background: #f6f8fa; border-right: 1px solid #d0d7de; white-space: nowrap;
+}
+table.code-table td.src { white-space: pre-wrap; word-break: break-all; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+table.code-table tr.selectable td.ln { cursor: pointer; }
+table.code-table tr.selectable td.ln:hover { background: #dbeafe; color: #1d4ed8; }
+table.code-table tr.picked td.src, table.code-table tr.picked td.ln { background: #fff8c5 !important; }
+.file-tree { font-size: 14px; }
+.file-tree a { text-decoration: none; display: block; padding: 2px 6px; border-radius: 4px; color: inherit; }
+.file-tree a:hover { background: #eef1f4; }
+.file-tree a.active { background: #dbeafe; font-weight: 600; }
+.file-tree .dir { color: #57606a; padding: 2px 6px; }

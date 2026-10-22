@@ -5,6 +5,7 @@ import com.submithub.security.AppUser;
 import com.submithub.service.AssignmentService;
 import com.submithub.service.AssignmentService.AssignmentInput;
 import com.submithub.service.BusinessException;
+import com.submithub.service.SubmissionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -55,14 +56,21 @@ public class AssignmentController {
     }
 
     private final AssignmentService assignmentService;
+    private final SubmissionService submissionService;
 
-    public AssignmentController(AssignmentService assignmentService) {
+    public AssignmentController(AssignmentService assignmentService, SubmissionService submissionService) {
         this.assignmentService = assignmentService;
+        this.submissionService = submissionService;
     }
 
     @GetMapping("/assignments/{id}")
     public String detail(@PathVariable Long id, @AuthenticationPrincipal AppUser user, Model model) {
         model.addAttribute("assignment", assignmentService.view(id, user));
+        if (user.isProfessor()) {
+            model.addAttribute("status", submissionService.statusFor(id, user));
+        } else {
+            model.addAttribute("history", submissionService.history(id, user.getId(), user));
+        }
         return "assignments/detail";
     }
 

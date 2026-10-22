@@ -19,6 +19,8 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- 기본은 일반 테스트. experiments 프로필이 실험 소스 폴더로 바꾼다 -->
+        <test.source.dir>src/test/java</test.source.dir>
     </properties>
 
     <dependencies>
@@ -93,7 +95,54 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <!--
+          정량 평가 실험 (docs/EVALUATION.md). 기본 mvn test 에는 포함되지 않는다.
+          실행: JDK 21 로 mvn -Pexperiments test   (표절 검사 정확도, JPlag 비교, diff 성능; 수 분 걸린다)
+          이 프로필에서는 일반 테스트 대신 src/experiments/java 의 실험만 실행하고, 결과를 docs/ 에 쓴다.
+        -->
+        <profile>
+            <id>experiments</id>
+            <properties>
+                <test.source.dir>src/experiments/java</test.source.dir>
+                <!-- JPlag 5.x 는 Java 21 로 빌드돼 있어서 실험 프로필은 JDK 21 로 실행한다 (애플리케이션은 17 기준 그대로) -->
+                <java.version>21</java.version>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>de.jplag</groupId>
+                    <artifactId>jplag</artifactId>
+                    <version>5.1.0</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>de.jplag</groupId>
+                    <artifactId>java</artifactId>
+                    <version>5.1.0</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <testResources>
+                    <testResource>
+                        <directory>src/experiments/resources</directory>
+                    </testResource>
+                </testResources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>-Djava.awt.headless=true -Xmx2g -Dfile.encoding=UTF-8</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
+        <testSourceDirectory>${test.source.dir}</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

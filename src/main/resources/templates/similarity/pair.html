@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${pair.studentA} + ' ↔ ' + ${pair.studentB}">유사도 비교</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${pair.assignmentId})}" th:text="${pair.assignmentTitle}">과제</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}/similarity(id=${pair.assignmentId})}">표절 검사</a></li>
+        <li class="breadcrumb-item active" th:text="${pair.studentA} + ' ↔ ' + ${pair.studentB}">쌍</li></ol></nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h1 class="h4 mb-0">
+            <span th:text="${pair.studentA}">A</span> <small class="text-muted" th:text="'v' + ${pair.versionA}"></small>
+            ↔
+            <span th:text="${pair.studentB}">B</span> <small class="text-muted" th:text="'v' + ${pair.versionB}"></small>
+        </h1>
+        <div>
+            <span class="badge fs-6" th:classappend="${pair.score >= 0.9} ? 'text-bg-danger' : (${pair.score >= 0.75} ? 'text-bg-warning' : 'text-bg-info')"
+                  th:text="'유사도 ' + ${#numbers.formatDecimal(pair.score * 100, 1, 0)} + '%'">80%</span>
+            <span class="small text-muted ms-2" th:text="'겹치는 줄 ' + ${pair.matchedLinesA} + ' / ' + ${pair.matchedLinesB} + ' · 공통 지문 ' + ${pair.sharedFingerprints}"></span>
+        </div>
+    </div>
+    <p class="small text-muted"><span class="matched-sample px-2">노란 줄</span> 이 서로 겹치는 구조의 코드입니다. 변수명·주석·공백이 달라도 같은 구조면 표시됩니다.</p>
+
+    <div class="row g-3">
+        <div class="col-lg-6" th:each="side : ${ {'A','B'} }">
+            <div class="card shadow-sm">
+                <div class="card-header py-2">
+                    <strong th:text="${side == 'A'} ? ${pair.studentA} : ${pair.studentB}">학생</strong>
+                    <span class="small text-muted" th:text="'· 겹침 ' + ${#numbers.formatDecimal((side == 'A' ? pair.coverageA : pair.coverageB) * 100, 1, 0)} + '%'"></span>
+                </div>
+                <div th:each="f, fs : ${side == 'A'} ? ${pair.filesA} : ${pair.filesB}">
+                    <div class="px-2 py-1 bg-light border-bottom"><code th:text="${f.path}">path</code></div>
+                    <div class="table-responsive">
+                        <table class="code-table pair-table">
+                            <tbody>
+                            <tr th:each="l : ${f.lines}" th:classappend="${l.matched} ? 'matched'">
+                                <td class="ln" th:text="${l.no}">1</td>
+                                <td class="src" th:attr="data-group=${side} + ${fs.index}" th:text="${l.text}">code</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-body text-muted small" th:if="${#lists.isEmpty(side == 'A' ? pair.filesA : pair.filesB)}">텍스트 파일이 없습니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // 파일 블록마다 확장자로 언어를 정해 하이라이트
+            document.querySelectorAll('.pair-table').forEach(function (table) {
+                var path = table.closest('div').parentElement.querySelector('code').textContent;
+                table.querySelectorAll('td.src').forEach(function (td) { td.dataset.lang = SubmitHub.langOf(path) || ''; });
+            });
+            SubmitHub.highlightAll();
+        });
+    </script>
+</main>
+</body>
+</html>

@@ -22,6 +22,9 @@ table.diff-table td.diff-add-ln { background: #ccffd8 !important; }
 table.diff-table td.diff-del-ln { background: #ffd7d5 !important; }
 table.diff-table td.diff-empty { background: #f3f4f6; }
 table.diff-table tr.diff-skip td { background: #f1f8ff; }
+/* 표절 검사 쌍 비교: 겹치는 줄 강조 */
+table.pair-table tr.matched td.src, table.pair-table tr.matched td.ln { background: #fff3bf !important; }
+.matched-sample { background: #fff3bf; }
 .file-tree { font-size: 14px; }
 .file-tree a { text-decoration: none; display: block; padding: 2px 6px; border-radius: 4px; color: inherit; }
 .file-tree a:hover { background: #eef1f4; }

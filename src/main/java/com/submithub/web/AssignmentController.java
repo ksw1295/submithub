@@ -5,6 +5,7 @@ import com.submithub.security.AppUser;
 import com.submithub.service.AssignmentService;
 import com.submithub.service.AssignmentService.AssignmentInput;
 import com.submithub.service.BusinessException;
+import com.submithub.service.FeedbackService;
 import com.submithub.service.SubmissionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -57,10 +58,13 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
     private final SubmissionService submissionService;
+    private final FeedbackService feedbackService;
 
-    public AssignmentController(AssignmentService assignmentService, SubmissionService submissionService) {
+    public AssignmentController(AssignmentService assignmentService, SubmissionService submissionService,
+                                FeedbackService feedbackService) {
         this.assignmentService = assignmentService;
         this.submissionService = submissionService;
+        this.feedbackService = feedbackService;
     }
 
     @GetMapping("/assignments/{id}")
@@ -68,8 +72,10 @@ public class AssignmentController {
         model.addAttribute("assignment", assignmentService.view(id, user));
         if (user.isProfessor()) {
             model.addAttribute("status", submissionService.statusFor(id, user));
+            model.addAttribute("feedbackByStudent", feedbackService.summaries(id, user));
         } else {
             model.addAttribute("history", submissionService.history(id, user.getId(), user));
+            model.addAttribute("feedback", feedbackService.forStudent(id, user.getId(), user));
         }
         return "assignments/detail";
     }

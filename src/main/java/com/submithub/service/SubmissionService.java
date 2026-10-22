@@ -70,7 +70,8 @@ public class SubmissionService {
                                  String selectedPath, List<String> selectedLines, boolean selectedBinary,
                                  String selectedCharset, long selectedSize, List<VersionLink> versions,
                                  Map<Integer, List<ReviewService.CommentThread>> threadsByEndLine,
-                                 GradeService.GradeView grade, Long prevSubmissionId) {
+                                 GradeService.GradeView grade, Long prevSubmissionId,
+                                 Map<Long, FeedbackService.TrackedComment> tracking) {
     }
 
     public record Download(String filename, byte[] bytes) {
@@ -88,12 +89,13 @@ public class SubmissionService {
     private final FileStorage storage;
     private final ReviewService reviews;
     private final GradeService grades;
+    private final FeedbackService feedback;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
                              UploadProcessor processor, FileStorage storage, ReviewService reviews,
-                             GradeService grades, PlatformTransactionManager txManager) {
+                             GradeService grades, FeedbackService feedback, PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -103,6 +105,7 @@ public class SubmissionService {
         this.storage = storage;
         this.reviews = reviews;
         this.grades = grades;
+        this.feedback = feedback;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -276,7 +279,19 @@ public class SubmissionService {
                 selected == null ? List.of() : LineSplitter.split(selected.getContentText()),
                 selected != null && selected.isBinary(),
                 selected == null ? null : selected.getCharset(),
-                selected == null ? 0 : selected.getSize(), versions, threads, grades.get(s.getId()), prevId);
+                selected == null ? 0 : selected.getSize(), versions, threads, grades.get(s.getId()), prevId,
+                trackingOf(s));
+    }
+
+    /** 이 버전보다 새 버전이 있을 때만, 코멘트가 지금 어떻게 되었는지(반영 상태)를 코멘트 ID 별로 돌려준다 */
+    private Map<Long, FeedbackService.TrackedComment> trackingOf(Submission s) {
+        Map<Long, FeedbackService.TrackedComment> map = new HashMap<>();
+        for (var t : feedback.computeUnchecked(s.getAssignment().getId(), s.getStudent().getId()).items()) {
+            if (t.commentSubmissionId().equals(s.getId()) && !t.status().equals("PENDING")) {
+                map.put(t.commentId(), t);
+            }
+        }
+        return map;
     }
 
     /** 경로 목록을 들여쓰기 깊이가 있는 평평한 트리 목록으로 바꾼다 */

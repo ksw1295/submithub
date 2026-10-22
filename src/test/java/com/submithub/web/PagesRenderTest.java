@@ -142,6 +142,59 @@ class PagesRenderTest {
     }
 
     @Test
+    void 반영_추적_화면이_렌더링된다() throws Exception {
+        Long f1 = submissionService.view(v1.id(), null, prof).selectedFileId();
+        reviewService.addComment(f1, 2, 2, "a 는 그대로 둔 줄", prof);       // v2 에서도 그대로 → 미반영
+        reviewService.addComment(f1, 3, 3, "b 의 타입을 바꾸세요", prof);     // v2 에서 int→long → 반영됨
+
+        String student = body(user(stu), "/assignments/" + assignment.getId());
+        assertThat(student).contains("남은 피드백 1개").contains("🔴 미반영").contains("🟢 반영됨").contains("반영률 50%");
+        assertThat(student).contains("최신 v2 2줄");
+
+        String v1Page = body(user(stu), "/submissions/" + v1.id());
+        assertThat(v1Page).contains("🔴 미반영").contains("에 그대로 있음").contains("v2에서 수정됨");
+
+        String prof = body(user(this.prof), "/assignments/" + assignment.getId());
+        assertThat(prof).contains("피드백 반영").contains("50%").contains("표절 검사");
+        String history = body(user(this.prof), "/assignments/" + assignment.getId() + "/students/" + stu.getId());
+        assertThat(history).contains("피드백 반영 현황").contains("반영률 50%");
+    }
+
+    @Test
+    void 표절_검사_화면이_렌더링되고_학생은_접근할수_없다() throws Exception {
+        String code = "import java.util.*;\npublic class Main {\n    public static void main(String[] a) {\n"
+                + "        int total = 0;\n        for (int i = 0; i < 10; i++) {\n            if (i % 2 == 0) { total += i; } else { total -= 1; }\n"
+                + "        }\n        System.out.println(total);\n        List<Integer> xs = new ArrayList<>();\n"
+                + "        for (int i = 0; i < 5; i++) { xs.add(i * i); }\n        System.out.println(xs);\n    }\n}\n";
+        AppUser other = data.student();
+        courseService.join(other, course.getInviteCode());
+        submissionService.submit(assignment.getId(), other, List.of(new Upload("Main.java",
+                code.replace("total", "sum").replace("xs", "list").getBytes(StandardCharsets.UTF_8))), null);
+        submissionService.submit(assignment.getId(), stu, List.of(new Upload("Main.java", code.getBytes(StandardCharsets.UTF_8))), "코드");
+
+        String index = "/assignments/" + assignment.getId() + "/similarity";
+        assertThat(body(user(prof), index)).contains("아직 검사를 실행하지 않았습니다").contains("검사 실행");
+
+        MvcResult run = mvc.perform(post(index).with(user(prof)).with(csrf()).param("percent", "60"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl(index)).andReturn();
+        assertThat(run.getFlashMap().get("message").toString()).contains("의심 쌍");
+
+        String result = body(user(prof), index);
+        assertThat(result).contains("유사도 순위").contains("나란히 비교");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/similarity/pairs/(\\d+)").matcher(result);
+        assertThat(m.find()).isTrue();
+        String pair = body(user(prof), "/similarity/pairs/" + m.group(1));
+        assertThat(pair).contains("class=\"matched\"").contains("유사도");
+
+        for (String url : List.of(index, "/similarity/pairs/" + m.group(1))) {
+            mvc.perform(get(url).with(user(stu))).andExpect(status().isForbidden());
+        }
+        mvc.perform(post(index).with(user(stu)).with(csrf()).param("percent", "60")).andExpect(status().isForbidden());
+        mvc.perform(post(index).with(user(prof)).with(csrf()).param("percent", "abc"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("error"));
+    }
+
+    @Test
     void 잘못된_점수_입력은_오류_메시지로_돌려보낸다() throws Exception {
         for (String bad : List.of("abc", "101", "-5", "")) {
             mvc.perform(post("/submissions/" + v1.id() + "/grade").with(user(prof)).with(csrf())

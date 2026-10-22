@@ -3,6 +3,7 @@ package com.submithub.web;
 import com.submithub.security.AppUser;
 import com.submithub.service.BusinessException;
 import com.submithub.service.DiffService;
+import com.submithub.service.FeedbackService;
 import com.submithub.service.SubmissionService;
 import com.submithub.storage.UploadProcessor.Upload;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +32,13 @@ public class SubmissionController {
 
     private final SubmissionService submissionService;
     private final DiffService diffService;
+    private final FeedbackService feedbackService;
 
-    public SubmissionController(SubmissionService submissionService, DiffService diffService) {
+    public SubmissionController(SubmissionService submissionService, DiffService diffService,
+                                FeedbackService feedbackService) {
         this.submissionService = submissionService;
         this.diffService = diffService;
+        this.feedbackService = feedbackService;
     }
 
     @PostMapping("/assignments/{id}/submit")
@@ -63,6 +67,8 @@ public class SubmissionController {
     public String history(@PathVariable Long aid, @PathVariable Long sid, @AuthenticationPrincipal AppUser user,
                           Model model) {
         model.addAttribute("history", submissionService.history(aid, sid, user));
+        model.addAttribute("feedback", feedbackService.forStudent(aid, sid, user));
+        model.addAttribute("canComment", user.isProfessor());
         return "submissions/history";
     }
 

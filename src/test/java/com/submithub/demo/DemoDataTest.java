@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DemoDataTest {
 
     @Autowired UserRepository users;
+    @Autowired com.submithub.domain.AssignmentRepository assignments;
+    @Autowired com.submithub.domain.SubmissionRepository submissionRepo;
     @Autowired PasswordEncoder encoder;
     @Autowired StatsService statsService;
     @Autowired FeedbackService feedbackService;
@@ -113,6 +115,41 @@ class DemoDataTest {
         }
         var view = similarityService.pair(top.id(), prof());
         assertThat(view.filesA().get(0).lines().stream().filter(SimilarityService.CodeLine::matched).count()).isGreaterThan(20);
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    void 마감과_제출_시각이_발표용으로_깔끔하다() {
+        for (var a : assignments.findAll()) {
+            assertThat(a.getDueAt().toLocalTime()).as(a.getTitle() + " 마감").isEqualTo(java.time.LocalTime.of(23, 59));
+            if (a.isAllowLate()) {
+                assertThat(a.getLateUntil().toLocalTime()).as(a.getTitle() + " 지각 허용 기한").isEqualTo(java.time.LocalTime.of(23, 59));
+                assertThat(a.getLateUntil().toLocalDate()).isAfter(a.getDueAt().toLocalDate());
+            }
+        }
+        var all = submissionRepo.findAll();
+        assertThat(all).isNotEmpty();
+        for (var s : all) {
+            assertThat(s.getSubmittedAt().getMinute() % 30).as("제출 시각 " + s.getSubmittedAt()).isZero();
+            assertThat(s.getSubmittedAt().getSecond()).isZero();
+            assertThat(s.getSubmittedAt()).isBeforeOrEqualTo(java.time.LocalDateTime.now());   // 미래 시각 없음
+        }
+        // 지각 제출 1건은 마감 이후, 나머지는 마감 이전
+        assertThat(all.stream().filter(s -> s.isLate())).hasSize(1);
+        assertThat(all.stream().filter(s -> s.isLate()).findFirst().orElseThrow().getSubmittedAt())
+                .isAfter(all.stream().filter(s -> s.isLate()).findFirst().orElseThrow().getAssignment().getDueAt());
+    }
+
+    @Test
+    void 새_코멘트만_있는_박서연은_퍼센트_없이_표기되고_평균은_2명_기준이다() {
+        var stats = statsService.course(1L, prof());
+        var row = stats.assignments().get(0).students().stream()
+                .filter(r -> r.name().equals("박서연")).findFirst().orElseThrow();
+        assertThat(row.feedback().hasRate()).isFalse();
+        assertThat(row.feedback().rateLabel()).isEqualTo("새 코멘트 1개");
+
+        assertThat(stats.averageFeedbackStudents()).isEqualTo(2);   // 이민준(75%), 강도윤(0%)
+        assertThat(stats.averageFeedbackRate()).isEqualTo(38);
     }
 
     @Test

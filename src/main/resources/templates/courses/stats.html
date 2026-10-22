@@ -20,7 +20,10 @@
             <div class="fs-3 fw-bold" th:text="${#lists.isEmpty(stats.assignments)} ? '-' : (${stats.averageSubmitRate} + '%')">0%</div></div></div></div>
         <div class="col-6 col-md-3"><div class="card shadow-sm"><div class="card-body py-3">
             <div class="small text-muted">평균 피드백 반영률</div>
-            <div class="fs-3 fw-bold" th:text="${stats.averageFeedbackRate >= 0} ? (${stats.averageFeedbackRate} + '%') : '-'">-</div></div></div></div>
+            <div class="fs-3 fw-bold" th:text="${stats.averageFeedbackRate >= 0} ? (${stats.averageFeedbackRate} + '%') : '-'">-</div>
+            <div class="text-muted" style="font-size: .75rem" id="feedbackBasis"
+                 th:text="${stats.averageFeedbackStudents > 0} ? ('추적 대상 코멘트가 있는 학생 ' + ${stats.averageFeedbackStudents} + '명 기준') : '추적 대상 코멘트가 있는 학생이 없습니다'">기준</div>
+        </div></div></div>
     </div>
 
     <div class="alert alert-secondary" th:if="${#lists.isEmpty(stats.assignments)}">등록된 과제가 없어 통계가 없습니다.</div>
@@ -74,12 +77,7 @@
                         <span class="badge text-bg-warning" th:if="${s.submitted and s.late}">지각</span>
                     </td>
                     <td><strong th:if="${s.score != null}" th:text="${s.score} + '점'"></strong></td>
-                    <td>
-                        <span th:if="${s.feedbackRate >= 0}"><strong th:text="${s.feedbackRate} + '%'"></strong>
-                            <small class="text-muted" th:text="'(미반영 ' + ${s.feedbackUnchanged} + ' / 전체 ' + ${s.feedbackTotal} + ')'"></small></span>
-                        <span th:if="${s.feedbackRate < 0 and s.feedbackTotal > 0}" class="text-muted small" th:text="'새 코멘트 ' + ${s.feedbackTotal} + '개'"></span>
-                        <span th:if="${s.feedbackRate < 0 and s.feedbackTotal == 0}" class="text-muted">-</span>
-                    </td>
+                    <td><span th:replace="~{submissions/fragments :: rateCell(${s.feedback})}"></span></td>
                 </tr>
                 </tbody>
             </table>

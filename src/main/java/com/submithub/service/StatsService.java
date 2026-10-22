@@ -23,8 +23,19 @@ import java.util.Map;
 public class StatsService {
 
     public record StudentRow(Long studentId, String name, String studentNo, int versions, boolean submitted,
-                             boolean late, Integer score, int feedbackRate, int feedbackTotal,
-                             int feedbackUnchanged) {
+                             boolean late, Integer score, FeedbackService.FeedbackSummary feedback) {
+        // 반영률 계산과 표기는 FeedbackSummary 한 곳에서 한다 (과제 제출 현황 화면과 같은 값)
+        public int feedbackRate() {
+            return feedback.ratePercent();
+        }
+
+        public int feedbackTotal() {
+            return feedback.total();
+        }
+
+        public int feedbackUnchanged() {
+            return feedback.unchanged();
+        }
     }
 
     /**
@@ -37,9 +48,13 @@ public class StatsService {
                                  List<Integer> byHour, List<StudentRow> students) {
     }
 
-    /** averageFeedbackRate: 반영률이 계산되는 학생들의 평균(%), 없으면 -1 */
+    /**
+     * @param averageFeedbackRate     반영률이 계산되는(추적 대상 코멘트가 있는) 학생들의 평균(%), 없으면 -1.
+     *                                학생마다 과제별 반영률을 평균낸 값을 다시 학생 수로 평균한다
+     * @param averageFeedbackStudents 그 평균에 들어간 학생 수
+     */
     public record CourseStats(Long courseId, String courseName, int enrolled, List<AssignmentStat> assignments,
-                              List<Integer> hourTotal, int averageFeedbackRate) {
+                              List<Integer> hourTotal, int averageFeedbackRate, int averageFeedbackStudents) {
         public List<String> assignmentTitles() {
             return assignments.stream().map(AssignmentStat::title).toList();
         }
@@ -90,18 +105,20 @@ public class StatsService {
 
         int[] hourTotal = new int[24];
         List<AssignmentStat> stats = new ArrayList<>();
-        List<Integer> rates = new ArrayList<>();
+        Map<Long, List<Integer>> ratesByStudent = new HashMap<>();
         for (Assignment a : assignments.findByCourseIdOrderByDueAtAsc(courseId)) {
             AssignmentStat s = assignment(a, students, professor, now);
             stats.add(s);
             for (int h = 0; h < 24; h++) {
                 hourTotal[h] += s.byHour().get(h);
             }
-            s.students().stream().filter(r -> r.feedbackRate() >= 0).forEach(r -> rates.add(r.feedbackRate()));
+            s.students().stream().filter(r -> r.feedback().hasRate())
+                    .forEach(r -> ratesByStudent.computeIfAbsent(r.studentId(), k -> new ArrayList<>()).add(r.feedbackRate()));
         }
-        int avg = rates.isEmpty() ? -1 : (int) Math.round(rates.stream().mapToInt(Integer::intValue).average().orElse(0));
+        int avg = ratesByStudent.isEmpty() ? -1 : (int) Math.round(ratesByStudent.values().stream()
+                .mapToDouble(l -> l.stream().mapToInt(Integer::intValue).average().orElse(0)).average().orElse(0));
         return new CourseStats(course.getId(), course.getName(), students.size(), stats,
-                java.util.Arrays.stream(hourTotal).boxed().toList(), avg);
+                java.util.Arrays.stream(hourTotal).boxed().toList(), avg, ratesByStudent.size());
     }
 
     private AssignmentStat assignment(Assignment a, List<Enrollment> students, AppUser professor, LocalDateTime now) {
@@ -140,8 +157,7 @@ public class StatsService {
             rows.add(new StudentRow(sid, e.getStudent().getName(), e.getStudent().getStudentNo(),
                     versions.getOrDefault(sid, 0), s != null, s != null && s.isLate(),
                     s == null ? null : grades.score(s.getId()),
-                    summary == null || !summary.hasRate() ? -1 : summary.ratePercent(),
-                    summary == null ? 0 : summary.total(), summary == null ? 0 : summary.unchanged()));
+                    summary == null ? FeedbackService.FeedbackSummary.empty() : summary));
         }
         int submitted = students.size() - missing.size();
         int rate = students.isEmpty() ? 0 : (int) Math.round(100.0 * submitted / students.size());

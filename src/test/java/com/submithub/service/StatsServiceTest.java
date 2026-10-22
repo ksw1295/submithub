@@ -117,9 +117,33 @@ class StatsServiceTest {
         assertThat(row.feedbackTotal()).isEqualTo(2);
         assertThat(row.feedbackUnchanged()).isEqualTo(1);
         assertThat(stats.averageFeedbackRate()).isEqualTo(50);
+        assertThat(stats.averageFeedbackStudents()).isEqualTo(1);     // 추적 대상 코멘트가 있는 학생 1명 기준
         var noComments = stats.assignments().get(0).students().stream()
                 .filter(r -> r.studentId().equals(b.getId())).findFirst().orElseThrow();
         assertThat(noComments.feedbackRate()).isEqualTo(-1);
+    }
+
+    @Test
+    void 새_코멘트만_있는_학생은_평균에서_빠지고_기준_학생_수는_학생_단위다() {
+        Assignment one = data.assignment(course, prof, Duration.ofDays(2), false, null);
+        Assignment two = data.assignment(course, prof, Duration.ofDays(3), false, null);
+        // a: 과제 1 에서 100%, 과제 2 에서 0% → 학생 a 의 평균 50%
+        var a1 = submissionService.submit(one.getId(), a, List.of(file("x\n")), null);
+        reviewService.addComment(submissionService.view(a1.id(), null, prof).selectedFileId(), 1, 1, "고쳐요", prof);
+        submissionService.submit(one.getId(), a, List.of(file("X\n")), null);
+        var a2 = submissionService.submit(two.getId(), a, List.of(file("y\n")), null);
+        reviewService.addComment(submissionService.view(a2.id(), null, prof).selectedFileId(), 1, 1, "고쳐요", prof);
+        submissionService.submit(two.getId(), a, List.of(file("y\n")), null);
+        // b: 새 코멘트만 1개 → 반영률 없음, 평균에 들어가지 않는다
+        var b1 = submissionService.submit(one.getId(), b, List.of(file("z\n")), null);
+        reviewService.addComment(submissionService.view(b1.id(), null, prof).selectedFileId(), 1, 1, "새 코멘트", prof);
+
+        var stats = statsService.course(course.getId(), prof);
+        assertThat(stats.averageFeedbackStudents()).isEqualTo(1);
+        assertThat(stats.averageFeedbackRate()).isEqualTo(50);
+        var rowB = stats.assignments().stream().filter(s -> s.id().equals(one.getId())).findFirst().orElseThrow()
+                .students().stream().filter(r -> r.studentId().equals(b.getId())).findFirst().orElseThrow();
+        assertThat(rowB.feedback().rateLabel()).isEqualTo("새 코멘트 1개");
     }
 
     @Test
@@ -128,6 +152,7 @@ class StatsServiceTest {
         assertThat(empty.assignments()).isEmpty();
         assertThat(empty.averageSubmitRate()).isZero();
         assertThat(empty.averageFeedbackRate()).isEqualTo(-1);
+        assertThat(empty.averageFeedbackStudents()).isZero();
 
         Assignment asg = data.assignment(course, prof, Duration.ofDays(2), false, null);
         var s = statsService.course(course.getId(), prof).assignments().get(0);

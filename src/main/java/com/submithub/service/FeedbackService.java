@@ -46,6 +46,30 @@ public class FeedbackService {
             return ratePercent >= 0;
         }
 
+        /**
+         * 화면에 보이는 반영률 표기 (과제 제출 현황·통계 화면 공용).
+         * 반영률이 있으면 "75%", 새 코멘트만 있으면 "새 코멘트 1개", 코멘트가 없으면 "-"
+         */
+        public String rateLabel() {
+            if (hasRate()) {
+                return ratePercent + "%";
+            }
+            return pending > 0 ? "새 코멘트 " + pending + "개" : "-";
+        }
+
+        /** 반영률 옆의 보조 설명. 반영률이 있을 때만: "미반영 1 / 추적 4" (+ 새 코멘트가 더 있으면 함께) */
+        public String rateDetail() {
+            if (!hasRate()) {
+                return "";
+            }
+            String text = "미반영 " + unchanged + " / 추적 " + tracked;
+            return pending > 0 ? text + ", 새 코멘트 " + pending + "개" : text;
+        }
+
+        public static FeedbackSummary empty() {
+            return of(List.of());
+        }
+
         static FeedbackSummary of(List<TrackedComment> items) {
             int unchanged = 0, modified = 0, deleted = 0, pending = 0;
             for (TrackedComment c : items) {

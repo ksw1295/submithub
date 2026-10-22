@@ -113,7 +113,7 @@ public class DemoDataLoader implements ApplicationRunner {
         Assignment a1 = assignments.save(new Assignment(course, "과제 1: 연결 리스트 구현",
                 "단일 연결 리스트를 구현하세요. add, get, remove, size 가 동작해야 합니다.\n"
                         + "제공한 뼈대 코드(LinkedList.java)를 시작점으로 사용하세요.",
-                due1, true, now.plusDays(30), DemoCode.BASELINE));
+                due1, true, now.plusDays(30).toLocalDate().atTime(23, 59), DemoCode.BASELINE));
         LocalDateTime due2 = now.plusDays(3).withHour(23).withMinute(59).withSecond(0).withNano(0);
         Assignment a2 = assignments.save(new Assignment(course, "과제 2: 이진 탐색 트리",
                 "정수를 저장하는 이진 탐색 트리를 구현하세요. insert 와 contains 가 필요합니다.",
@@ -123,24 +123,24 @@ public class DemoDataLoader implements ApplicationRunner {
                 s5 = students.get(4), s7 = students.get(6);
 
         // ---- 과제 1 ----
-        Submission s1v1 = submit(a1, s1, 1, "처음 제출", due1.minusHours(30).minusMinutes(10),
+        Submission s1v1 = submit(a1, s1, 1, "처음 제출", at(due1, -2, 18, 0),
                 files("LinkedList.java", DemoCode.S1_V1_LIST, "Main.java", DemoCode.S1_MAIN));
         Submission s1v2 = submit(a1, s1, 2, "리뷰 반영: get 범위, 디버그 출력 삭제, addFirst 추가",
-                due1.minusHours(5).minusMinutes(25), files("LinkedList.java", DemoCode.S1_V2_LIST, "Main.java", DemoCode.S1_MAIN));
-        Submission s1v3 = submit(a1, s1, 3, "변수명 정리", due1.minusHours(1).minusMinutes(20),
+                at(due1, 0, 19, 0), files("LinkedList.java", DemoCode.S1_V2_LIST, "Main.java", DemoCode.S1_MAIN));
+        Submission s1v3 = submit(a1, s1, 3, "변수명 정리", at(due1, 0, 22, 30),
                 files("LinkedList.java", DemoCode.S1_V3_LIST, "Main.java", DemoCode.S1_MAIN));
 
-        Submission s2v1 = submit(a1, s2, 1, "연결 리스트 구현 완료", due1.minusHours(20).minusMinutes(40),
+        Submission s2v1 = submit(a1, s2, 1, "연결 리스트 구현 완료", at(due1, -1, 15, 0),
                 files("LinkedList.java", DemoCode.ORIGINAL));
-        Submission s3v1 = submit(a1, s3, 1, "제출합니다", due1.minusHours(2).minusMinutes(5),
+        Submission s3v1 = submit(a1, s3, 1, "제출합니다", at(due1, 0, 21, 0),
                 files("LinkedList.java", DemoCode.disguised(DemoCode.ORIGINAL)));
-        Submission s4v1 = submit(a1, s4, 1, "늦어서 죄송합니다", due1.plusHours(7).plusMinutes(12),
+        Submission s4v1 = submit(a1, s4, 1, "늦어서 죄송합니다", at(due1, 1, 7, 0),
                 files("LinkedList.java", DemoCode.GENERIC_STYLE));
-        Submission s5v1 = submit(a1, s5, 1, "이중 연결 리스트로 구현", due1.minusHours(27).minusMinutes(30),
+        Submission s5v1 = submit(a1, s5, 1, "이중 연결 리스트로 구현", at(due1, -2, 21, 30),
                 files("LinkedList.java", DemoCode.DOUBLY_V1));
-        Submission s5v2 = submit(a1, s5, 2, "addFirst 수정", due1.minusMinutes(35),
+        Submission s5v2 = submit(a1, s5, 2, "addFirst 수정", at(due1, 0, 23, 30),
                 files("LinkedList.java", DemoCode.DOUBLY_V2));
-        Submission s7v1 = submit(a1, s7, 1, "센티넬 노드 방식", due1.minusHours(1).minusMinutes(50),
+        Submission s7v1 = submit(a1, s7, 1, "센티넬 노드 방식", at(due1, 0, 22, 0),
                 files("LinkedList.java", DemoCode.SENTINEL_STYLE));
         // student6(윤지우)은 과제 1 미제출
 
@@ -178,9 +178,9 @@ public class DemoDataLoader implements ApplicationRunner {
         grade(s7v1, prof, 90, "센티넬 노드를 쓴 구현이 인상적입니다.");
 
         // ---- 과제 2 (진행 중) ----
-        Submission b1 = submit(a2, s1, 1, "재귀로 구현", now.minusHours(6), files("Bst.java", DemoCode.BST_RECURSIVE));
-        submit(a2, s2, 1, "BST 완성", now.minusHours(2), files("Bst.java", DemoCode.BST_ITERATIVE));
-        submit(a2, s5, 1, "insert, contains", now.minusMinutes(70), files("Bst.java", DemoCode.BST_RECURSIVE
+        Submission b1 = submit(a2, s1, 1, "재귀로 구현", at(now, -1, 21, 0), files("Bst.java", DemoCode.BST_RECURSIVE));
+        submit(a2, s2, 1, "BST 완성", at(now, -1, 23, 0), files("Bst.java", DemoCode.BST_ITERATIVE));
+        submit(a2, s5, 1, "insert, contains", at(now, -1, 23, 30), files("Bst.java", DemoCode.BST_RECURSIVE
                 .replace("Node", "Entry").replace("key", "k")));
         comment(fileOf(b1, "Bst.java"), prof, line(S1(DemoCode.BST_RECURSIVE), "public boolean contains(int key) {"), null,
                 "contains 도 재귀 버전으로 통일하면 읽기 쉽습니다.", null);
@@ -190,6 +190,11 @@ public class DemoDataLoader implements ApplicationRunner {
     }
 
     // ---------- helpers ----------
+
+    /** base 의 날짜에서 dayOffset 일 뒤(음수면 앞) 날짜의 hour:minute (분 단위가 어색하지 않게 정각/30분으로 쓴다) */
+    private static LocalDateTime at(LocalDateTime base, int dayOffset, int hour, int minute) {
+        return base.toLocalDate().plusDays(dayOffset).atTime(hour, minute);
+    }
 
     private static Map<String, String> files(String... pairs) {
         Map<String, String> map = new LinkedHashMap<>();

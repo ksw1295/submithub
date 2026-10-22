@@ -94,13 +94,7 @@
                             <span class="badge text-bg-warning" th:if="${s.submitted and s.late}">지각</span>
                         </td>
                         <td><strong th:if="${s.score != null}" th:text="${s.score} + '점'"></strong></td>
-                        <td th:with="fb=${feedbackByStudent.get(s.studentId)}">
-                            <span th:if="${fb != null}">
-                                <span th:if="${fb.hasRate}" th:text="${fb.ratePercent} + '%'" class="fw-bold"></span>
-                                <small class="text-muted" th:text="'(미반영 ' + ${fb.unchanged} + ' / 전체 ' + ${fb.total} + ')'"></small>
-                            </span>
-                            <span th:if="${fb == null}" class="text-muted">-</span>
-                        </td>
+                        <td><span th:replace="~{submissions/fragments :: rateCell(${feedbackByStudent.get(s.studentId)})}"></span></td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-primary" th:if="${s.submitted}"
                                th:href="@{/assignments/{a}/students/{s}(a=${assignment.id},s=${s.studentId})}">이력 보기</a>

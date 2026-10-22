@@ -161,6 +161,29 @@ class PagesRenderTest {
     }
 
     @Test
+    void 새_코멘트만_있는_학생은_제출_현황과_통계_화면에서_똑같이_표기된다() throws Exception {
+        // 최신 버전(v2)에만 코멘트 1개 → 아직 고칠 기회가 없는 새 코멘트
+        reviewService.addComment(fileId, 1, 1, "새 코멘트", prof);
+        String statusPage = body(user(prof), "/assignments/" + assignment.getId());
+        String statsPage = body(user(prof), "/courses/" + course.getId() + "/stats");
+        for (String page : List.of(statusPage, statsPage)) {
+            assertThat(page).contains("새 코멘트 1개").doesNotContain("미반영 0 / 전체").doesNotContain("미반영 0 / 추적");
+        }
+        // 추적 대상 코멘트가 있는 학생이 없으므로 평균 카드에는 그 안내가 나온다
+        assertThat(statsPage).contains("추적 대상 코멘트가 있는 학생이 없습니다");
+
+        // v1 에 단 코멘트(v2 에서 그대로) → 반영률 0%, 두 화면 모두 같은 형식
+        Long f1 = submissionService.view(v1.id(), null, prof).selectedFileId();
+        reviewService.addComment(f1, 1, 1, "첫 줄", prof);
+        statusPage = body(user(prof), "/assignments/" + assignment.getId());
+        statsPage = body(user(prof), "/courses/" + course.getId() + "/stats");
+        for (String page : List.of(statusPage, statsPage)) {
+            assertThat(page).contains("0%").contains("미반영 1 / 추적 1, 새 코멘트 1개");
+        }
+        assertThat(statsPage).contains("추적 대상 코멘트가 있는 학생 1명 기준");
+    }
+
+    @Test
     void 표절_검사_화면이_렌더링되고_학생은_접근할수_없다() throws Exception {
         String code = "import java.util.*;\npublic class Main {\n    public static void main(String[] a) {\n"
                 + "        int total = 0;\n        for (int i = 0; i < 10; i++) {\n            if (i % 2 == 0) { total += i; } else { total -= 1; }\n"

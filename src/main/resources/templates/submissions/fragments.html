@@ -93,6 +93,16 @@
     </td>
 </tr>
 
+<!-- 학생 한 명의 반영률 표기. 과제 제출 현황과 통계 화면이 같이 쓴다. fb = FeedbackSummary 또는 null -->
+<span th:fragment="rateCell(fb)">
+    <span th:if="${fb == null}" class="text-muted">-</span>
+    <th:block th:if="${fb != null}">
+        <strong th:if="${fb.hasRate()}" th:text="${fb.rateLabel()}">75%</strong>
+        <span th:unless="${fb.hasRate()}" th:text="${fb.rateLabel()}" class="text-muted small">새 코멘트 1개</span>
+        <small class="text-muted" th:if="${fb.hasRate()}" th:text="'(' + ${fb.rateDetail()} + ')'"></small>
+    </th:block>
+</span>
+
 <!-- 피드백 반영 현황 카드. feedback = FeedbackService.FeedbackView, student = 학생 화면이면 true -->
 <div class="card shadow-sm mb-4" th:fragment="feedbackCard(feedback, student)" id="feedback">
     <div class="card-header d-flex justify-content-between align-items-center">

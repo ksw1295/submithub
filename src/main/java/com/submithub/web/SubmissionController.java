@@ -1,10 +1,11 @@
 package com.submithub.web;
 
 import com.submithub.security.AppUser;
-import com.submithub.service.AssignmentService;
 import com.submithub.service.BusinessException;
+import com.submithub.service.DiffService;
 import com.submithub.service.SubmissionService;
 import com.submithub.storage.UploadProcessor.Upload;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,11 +30,11 @@ import java.util.List;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
-    private final AssignmentService assignmentService;
+    private final DiffService diffService;
 
-    public SubmissionController(SubmissionService submissionService, AssignmentService assignmentService) {
+    public SubmissionController(SubmissionService submissionService, DiffService diffService) {
         this.submissionService = submissionService;
-        this.assignmentService = assignmentService;
+        this.diffService = diffService;
     }
 
     @PostMapping("/assignments/{id}/submit")
@@ -67,9 +68,30 @@ public class SubmissionController {
 
     @GetMapping("/submissions/{id}")
     public String view(@PathVariable Long id, @RequestParam(value = "file", required = false) Long fileId,
-                       @AuthenticationPrincipal AppUser user, Model model) {
+                       @AuthenticationPrincipal AppUser user, Model model, HttpServletRequest request) {
         model.addAttribute("sub", submissionService.view(id, fileId, user));
+        model.addAttribute("canComment", user.isProfessor());
+        model.addAttribute("back", currentUrl(request));
         return "submissions/view";
+    }
+
+    /** 임의의 두 버전 비교: from/to 는 제출 ID, mode=split|unified, ws=1 공백 무시, fold=0 이면 전체 펼치기 */
+    @GetMapping("/assignments/{aid}/students/{sid}/diff")
+    public String diff(@PathVariable Long aid, @PathVariable Long sid,
+                       @RequestParam(required = false) Long from, @RequestParam(required = false) Long to,
+                       @RequestParam(required = false) String file, @RequestParam(required = false) String mode,
+                       @RequestParam(required = false) String ws, @RequestParam(required = false) String fold,
+                       @AuthenticationPrincipal AppUser user, Model model, HttpServletRequest request) {
+        model.addAttribute("diff", diffService.compare(aid, sid, from, to, file, mode,
+                "1".equals(ws), !"0".equals(fold), user));
+        model.addAttribute("canComment", user.isProfessor());
+        model.addAttribute("back", currentUrl(request));
+        return "submissions/diff";
+    }
+
+    private static String currentUrl(HttpServletRequest request) {
+        String q = request.getQueryString();
+        return request.getRequestURI() + (q == null ? "" : "?" + q);
     }
 
     @GetMapping("/files/{id}/download")

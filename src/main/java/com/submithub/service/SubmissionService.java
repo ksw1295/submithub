@@ -43,7 +43,7 @@ public class SubmissionService {
 
     /** 버전 타임라인 한 줄. added/modified/removed 는 직전 버전과 비교한 파일 수 */
     public record VersionRow(Long id, int versionNo, String message, boolean late, LocalDateTime submittedAt,
-                             int fileCount, long totalSize, int added, int modified, int removed) {
+                             int fileCount, long totalSize, int added, int modified, int removed, Integer score) {
     }
 
     public record HistoryView(Long assignmentId, String assignmentTitle, Long courseId, Long studentId,
@@ -52,7 +52,7 @@ public class SubmissionService {
 
     public record StudentStatus(Long studentId, String name, String studentNo, int versions,
                                 Long latestSubmissionId, int latestVersion, LocalDateTime submittedAt,
-                                boolean late) {
+                                boolean late, Integer score) {
         public boolean submitted() {
             return latestSubmissionId != null;
         }
@@ -68,7 +68,9 @@ public class SubmissionService {
                                  Long assignmentId, String assignmentTitle, Long courseId, Long studentId,
                                  String studentName, List<FileNode> tree, Long selectedFileId,
                                  String selectedPath, List<String> selectedLines, boolean selectedBinary,
-                                 String selectedCharset, long selectedSize, List<VersionLink> versions) {
+                                 String selectedCharset, long selectedSize, List<VersionLink> versions,
+                                 Map<Integer, List<ReviewService.CommentThread>> threadsByEndLine,
+                                 GradeService.GradeView grade, Long prevSubmissionId) {
     }
 
     public record Download(String filename, byte[] bytes) {
@@ -84,11 +86,14 @@ public class SubmissionService {
     private final AccessService access;
     private final UploadProcessor processor;
     private final FileStorage storage;
+    private final ReviewService reviews;
+    private final GradeService grades;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
-                             UploadProcessor processor, FileStorage storage, PlatformTransactionManager txManager) {
+                             UploadProcessor processor, FileStorage storage, ReviewService reviews,
+                             GradeService grades, PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -96,6 +101,8 @@ public class SubmissionService {
         this.access = access;
         this.processor = processor;
         this.storage = storage;
+        this.reviews = reviews;
+        this.grades = grades;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -209,7 +216,7 @@ public class SubmissionService {
             }
             int removed = (int) previous.keySet().stream().filter(p -> !current.containsKey(p)).count();
             rows.add(new VersionRow(s.getId(), s.getVersionNo(), s.getMessage(), s.isLate(), s.getSubmittedAt(),
-                    s.getFiles().size(), total, added, modified, removed));
+                    s.getFiles().size(), total, added, modified, removed, grades.score(s.getId())));
             previous = current;
         }
         java.util.Collections.reverse(rows);   // 최신 버전이 위로
@@ -229,9 +236,10 @@ public class SubmissionService {
             User st = e.getStudent();
             Submission s = latest.get(st.getId());
             result.add(s == null
-                    ? new StudentStatus(st.getId(), st.getName(), st.getStudentNo(), 0, null, 0, null, false)
-                    : new StudentStatus(st.getId(), st.getName(), st.getStudentNo(), s.getVersionNo(), s.getId(),
-                    s.getVersionNo(), s.getSubmittedAt(), s.isLate()));
+                    ? new StudentStatus(st.getId(), st.getName(), st.getStudentNo(), 0, null, 0, null, false, null)
+                    : new StudentStatus(st.getId(), st.getName(), st.getStudentNo(),
+                    (int) submissions.countByAssignmentIdAndStudentId(assignmentId, st.getId()), s.getId(),
+                    s.getVersionNo(), s.getSubmittedAt(), s.isLate(), grades.score(s.getId())));
         }
         return result;
     }
@@ -251,9 +259,14 @@ public class SubmissionService {
                     .orElse(files.isEmpty() ? null : files.get(0));
         }
 
-        List<VersionLink> versions = submissions
-                .findByAssignmentIdAndStudentIdOrderByVersionNoAsc(s.getAssignment().getId(), s.getStudent().getId())
-                .stream().map(v -> new VersionLink(v.getId(), v.getVersionNo(), v.getId().equals(s.getId()))).toList();
+        List<Submission> all = submissions
+                .findByAssignmentIdAndStudentIdOrderByVersionNoAsc(s.getAssignment().getId(), s.getStudent().getId());
+        List<VersionLink> versions = all.stream()
+                .map(v -> new VersionLink(v.getId(), v.getVersionNo(), v.getId().equals(s.getId()))).toList();
+        Long prevId = all.stream().filter(v -> v.getVersionNo() == s.getVersionNo() - 1)
+                .map(Submission::getId).findFirst().orElse(null);
+        Map<Integer, List<ReviewService.CommentThread>> threads = selected == null || selected.isBinary()
+                ? Map.of() : ReviewService.byEndLine(reviews.threadsUnchecked(selected.getId()));
 
         return new SubmissionView(s.getId(), s.getVersionNo(), s.getMessage(), s.isLate(), s.getSubmittedAt(),
                 s.getAssignment().getId(), s.getAssignment().getTitle(), s.getAssignment().getCourse().getId(),
@@ -263,7 +276,7 @@ public class SubmissionService {
                 selected == null ? List.of() : LineSplitter.split(selected.getContentText()),
                 selected != null && selected.isBinary(),
                 selected == null ? null : selected.getCharset(),
-                selected == null ? 0 : selected.getSize(), versions);
+                selected == null ? 0 : selected.getSize(), versions, threads, grades.get(s.getId()), prevId);
     }
 
     /** 경로 목록을 들여쓰기 깊이가 있는 평평한 트리 목록으로 바꾼다 */

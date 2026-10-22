@@ -59,7 +59,9 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header"><strong>내 제출 이력</strong> <span class="text-muted" th:text="${#lists.size(history.versions)} + '개 버전'"></span></div>
             <div class="card-body" th:if="${#lists.isEmpty(history.versions)}"><span class="text-muted">아직 제출하지 않았습니다.</span></div>
-            <th:block th:unless="${#lists.isEmpty(history.versions)}" th:replace="~{submissions/fragments :: timeline(${history})}"></th:block>
+            <th:block th:unless="${#lists.isEmpty(history.versions)}">
+                <th:block th:replace="~{submissions/fragments :: timeline(${history})}"></th:block>
+            </th:block>
         </div>
     </div>
 

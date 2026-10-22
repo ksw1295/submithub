@@ -58,6 +58,59 @@
             });
             Object.keys(groups).forEach(function (k) { highlightCells(groups[k].cells, groups[k].lang); });
         },
+        // 줄 번호(td[data-pick]) 클릭으로 줄/범위(Shift)를 고르고, 그 아래에 코멘트 작성 폼(<template id=tpl>)을 끼워 넣는다
+        initCommenting: function (opts) {
+            var table = document.getElementById(opts.table);
+            var tpl = document.getElementById(opts.tpl);
+            if (!table || !tpl) return;
+            var cols = parseInt(table.dataset.cols || '2', 10);
+            var anchor = null, formRow = null;
+
+            function clear() {
+                table.querySelectorAll('tr.picked').forEach(function (r) { r.classList.remove('picked'); });
+                if (formRow) { formRow.remove(); formRow = null; }
+            }
+
+            table.addEventListener('click', function (e) {
+                var td = e.target.closest('td[data-pick]');
+                if (!td || !table.contains(td)) return;
+                var n = parseInt(td.dataset.pick, 10);
+                var start = n, end = n;
+                if (e.shiftKey && anchor !== null) {
+                    start = Math.min(anchor, n);
+                    end = Math.max(anchor, n);
+                } else {
+                    anchor = n;
+                }
+                clear();
+                var lastRow = null;
+                table.querySelectorAll('tr[data-newline]').forEach(function (r) {
+                    var ln = parseInt(r.dataset.newline, 10);
+                    if (ln >= start && ln <= end) { r.classList.add('picked'); lastRow = r; }
+                });
+                if (!lastRow) return;
+                formRow = document.createElement('tr');
+                formRow.className = 'comment-form-row';
+                var cell = document.createElement('td');
+                cell.colSpan = cols;
+                cell.style.background = '#f6f8fa';
+                cell.className = 'p-2';
+                cell.appendChild(tpl.content.cloneNode(true));
+                formRow.appendChild(cell);
+                lastRow.after(formRow);
+                var form = cell.querySelector('form');
+                form.querySelector('[name=startLine]').value = start;
+                form.querySelector('[name=endLine]').value = end;
+                form.querySelector('.range').textContent = start === end ? '줄 ' + start : '줄 ' + start + '~' + end;
+                form.querySelector('.cancel').addEventListener('click', clear);
+                form.querySelector('textarea').focus();
+                e.preventDefault();
+            });
+            // 선택 시 글자가 같이 선택되는 것을 막는다 (Shift+클릭)
+            table.addEventListener('mousedown', function (e) {
+                if (e.shiftKey && e.target.closest('td[data-pick]')) e.preventDefault();
+            });
+        },
         csrfHeaders: function () {
             var t = document.querySelector('meta[name=_csrf]');
             var h = document.querySelector('meta[name=_csrf_header]');

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${stats.courseName} + ' 통계'">통계</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses}">내 강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${stats.courseId})}" th:text="${stats.courseName}">강의</a></li>
+        <li class="breadcrumb-item active">제출 통계</li></ol></nav>
+
+    <h1 class="h3 mb-3">제출 통계 <small class="text-muted" th:text="${stats.courseName}"></small></h1>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="card shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">수강생</div><div class="fs-3 fw-bold" th:text="${stats.enrolled} + '명'">0명</div></div></div></div>
+        <div class="col-6 col-md-3"><div class="card shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">과제</div><div class="fs-3 fw-bold" th:text="${#lists.size(stats.assignments)} + '개'">0개</div></div></div></div>
+        <div class="col-6 col-md-3"><div class="card shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">평균 제출률</div>
+            <div class="fs-3 fw-bold" th:text="${#lists.isEmpty(stats.assignments)} ? '-' : (${stats.averageSubmitRate} + '%')">0%</div></div></div></div>
+        <div class="col-6 col-md-3"><div class="card shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">평균 피드백 반영률</div>
+            <div class="fs-3 fw-bold" th:text="${stats.averageFeedbackRate >= 0} ? (${stats.averageFeedbackRate} + '%') : '-'">-</div></div></div></div>
+    </div>
+
+    <div class="alert alert-secondary" th:if="${#lists.isEmpty(stats.assignments)}">등록된 과제가 없어 통계가 없습니다.</div>
+
+    <div class="row g-3 mb-4" th:unless="${#lists.isEmpty(stats.assignments)}">
+        <div class="col-lg-6"><div class="card shadow-sm h-100"><div class="card-header py-2"><strong class="small">과제별 제출률 (%)</strong></div>
+            <div class="card-body"><canvas id="rateChart" height="180"></canvas></div></div></div>
+        <div class="col-lg-6"><div class="card shadow-sm h-100"><div class="card-header py-2"><strong class="small">시간대별 제출 분포 (전체 과제, 모든 버전)</strong></div>
+            <div class="card-body"><canvas id="hourChart" height="180"></canvas></div></div></div>
+    </div>
+
+    <div class="card shadow-sm mb-4" th:each="a, st : ${stats.assignments}">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+            <strong><a th:href="@{/assignments/{id}(id=${a.id})}" th:text="${a.title}">과제</a></strong>
+            <span class="small text-muted">마감 <span th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}"></span>
+                <span class="badge text-bg-dark" th:if="${a.pastDue}">마감 지남</span></span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="mb-2">제출 <strong th:text="${a.submitted} + ' / ' + ${a.enrolled}">0 / 0</strong> 명
+                        <span class="text-muted" th:text="'(' + ${a.submitRatePercent} + '%)'"></span></div>
+                    <div class="progress mb-3" role="progressbar" style="height: 1rem">
+                        <div class="progress-bar" th:style="'width:' + ${a.submitRatePercent} + '%'"></div>
+                    </div>
+                    <div class="mb-1">지각 제출 <strong th:text="${a.lateStudents} + '명'">0명</strong></div>
+                    <div class="mb-1">마감 직전 24시간 제출
+                        <strong th:text="${a.lastDaySubmissions} + ' / ' + ${a.totalSubmissions} + '건'">0 / 0건</strong>
+                        <span class="text-muted" th:text="'(' + ${a.lastDayPercent} + '%)'"></span></div>
+                    <div class="mt-3"><div class="small text-muted mb-1">미제출자</div>
+                        <span th:if="${#lists.isEmpty(a.missing)}" class="text-success small">전원 제출</span>
+                        <span class="badge text-bg-secondary me-1" th:each="m : ${a.missing}" th:text="${m}">이름</span></div>
+                </div>
+                <div class="col-md-8">
+                    <div class="small text-muted mb-1">시간대별 제출 (모든 버전)</div>
+                    <canvas th:id="'hour-' + ${st.index}" height="110"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead><tr><th>학생</th><th>학번</th><th>제출 버전 수</th><th>상태</th><th>점수</th><th>피드백 반영률</th></tr></thead>
+                <tbody>
+                <tr th:each="s : ${a.students}">
+                    <td th:text="${s.name}">이름</td>
+                    <td th:text="${s.studentNo}">학번</td>
+                    <td th:text="${s.versions}">0</td>
+                    <td>
+                        <span class="badge text-bg-secondary" th:unless="${s.submitted}">미제출</span>
+                        <span class="badge text-bg-success" th:if="${s.submitted and !s.late}">제출</span>
+                        <span class="badge text-bg-warning" th:if="${s.submitted and s.late}">지각</span>
+                    </td>
+                    <td><strong th:if="${s.score != null}" th:text="${s.score} + '점'"></strong></td>
+                    <td>
+                        <span th:if="${s.feedbackRate >= 0}"><strong th:text="${s.feedbackRate} + '%'"></strong>
+                            <small class="text-muted" th:text="'(미반영 ' + ${s.feedbackUnchanged} + ' / 전체 ' + ${s.feedbackTotal} + ')'"></small></span>
+                        <span th:if="${s.feedbackRate < 0 and s.feedbackTotal > 0}" class="text-muted small" th:text="'새 코멘트 ' + ${s.feedbackTotal} + '개'"></span>
+                        <span th:if="${s.feedbackRate < 0 and s.feedbackTotal == 0}" class="text-muted">-</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/chart.js/4.4.3/dist/chart.umd.js}"></script>
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Chart === 'undefined') return;
+            var titles = /*[[${stats.assignmentTitles}]]*/ [];
+            var rates = /*[[${stats.submitRates}]]*/ [];
+            var hoursTotal = /*[[${stats.hourTotal}]]*/ [];
+            var hoursBy = /*[[${stats.hoursByAssignment}]]*/ [];
+            var hourLabels = Array.from({length: 24}, function (_, i) { return i + '시'; });
+            var integerTicks = {beginAtZero: true, precision: 0};
+
+            if (document.getElementById('rateChart')) {
+                new Chart(document.getElementById('rateChart'), {
+                    type: 'bar',
+                    data: {labels: titles, datasets: [{label: '제출률(%)', data: rates, backgroundColor: '#0d6efd'}]},
+                    options: {scales: {y: {beginAtZero: true, max: 100}}, plugins: {legend: {display: false}}}
+                });
+                new Chart(document.getElementById('hourChart'), {
+                    type: 'bar',
+                    data: {labels: hourLabels, datasets: [{label: '제출 수', data: hoursTotal, backgroundColor: '#198754'}]},
+                    options: {scales: {y: {ticks: integerTicks, beginAtZero: true}}, plugins: {legend: {display: false}}}
+                });
+            }
+            hoursBy.forEach(function (data, i) {
+                var el = document.getElementById('hour-' + i);
+                if (!el) return;
+                new Chart(el, {
+                    type: 'bar',
+                    data: {labels: hourLabels, datasets: [{label: '제출 수', data: data, backgroundColor: '#6f42c1'}]},
+                    options: {scales: {y: {ticks: integerTicks, beginAtZero: true}}, plugins: {legend: {display: false}}}
+                });
+            });
+        });
+    </script>
+</main>
+</body>
+</html>

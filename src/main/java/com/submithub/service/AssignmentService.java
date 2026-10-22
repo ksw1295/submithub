@@ -115,6 +115,12 @@ public class AssignmentService {
         a.update(a.getTitle(), a.getDescription(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(), null);
     }
 
+    /** 과제 등록 화면을 열 수 있는지 (강의를 연 교수만) */
+    @Transactional(readOnly = true)
+    public void requireCourseOwner(Long courseId, AppUser professor) {
+        access.courseOfProfessor(courseId, professor);
+    }
+
     @Transactional(readOnly = true)
     public Assignment editable(Long assignmentId, AppUser professor) {
         return access.assignmentOfProfessor(assignmentId, professor);

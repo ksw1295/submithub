@@ -14,6 +14,7 @@
         <div sec:authorize="hasRole('PROFESSOR')" class="text-end">
             <div class="small text-muted">초대 코드</div>
             <code class="fs-4 user-select-all" id="inviteCode" th:text="${course.inviteCode}">ABCD2345</code>
+            <div class="mt-2"><a class="btn btn-sm btn-outline-primary" th:href="@{/courses/{id}/stats(id=${course.id})}">📊 제출 통계</a></div>
         </div>
     </div>
 

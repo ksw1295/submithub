@@ -13,6 +13,7 @@ import com.submithub.domain.User;
 import com.submithub.domain.UserRepository;
 import com.submithub.security.AppUser;
 import com.submithub.storage.FileStorage;
+import com.submithub.storage.Hashing;
 import com.submithub.storage.UploadProcessor;
 import com.submithub.storage.UploadProcessor.Processed;
 import com.submithub.storage.UploadProcessor.Upload;
@@ -25,8 +26,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -180,16 +179,7 @@ public class SubmissionService {
     }
 
     static String sha256(byte[] bytes) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        return Hashing.sha256(bytes);
     }
 
     /** 한 학생의 한 과제 제출 이력 (본인 또는 그 강의의 교수만) */
@@ -197,6 +187,9 @@ public class SubmissionService {
     public HistoryView history(Long assignmentId, Long studentId, AppUser viewer) {
         Assignment a = access.studentHistory(assignmentId, studentId, viewer);
         User student = users.findById(studentId).orElseThrow(() -> new NotFoundException("학생을 찾을 수 없습니다."));
+        if (student.isProfessor()) {
+            throw new NotFoundException("학생을 찾을 수 없습니다.");
+        }
         List<Submission> list = submissions.findByAssignmentIdAndStudentIdOrderByVersionNoAsc(assignmentId, studentId);
         List<VersionRow> rows = new ArrayList<>();
         Map<String, String> previous = Map.of();

@@ -82,7 +82,8 @@ public class AssignmentController {
 
     @GetMapping("/courses/{courseId}/assignments/new")
     @PreAuthorize("hasRole('PROFESSOR')")
-    public String newForm(@PathVariable Long courseId, Model model) {
+    public String newForm(@PathVariable Long courseId, @AuthenticationPrincipal AppUser user, Model model) {
+        assignmentService.requireCourseOwner(courseId, user);
         AssignmentForm form = new AssignmentForm();
         form.setDueAt(LocalDateTime.now().plusDays(7).withMinute(0).withSecond(0).withNano(0));
         model.addAttribute("form", form);

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>서버 오류</title></head>
+<body>
+<main>
+    <div class="text-center py-5">
+        <h1 class="display-4">오류</h1>
+        <p class="lead">서버에서 문제가 발생했습니다.</p>
+        <p class="text-muted" th:if="${detail}" th:text="${detail}">잠시 후 다시 시도해 주세요.</p>
+        <a class="btn btn-primary" th:href="@{/}">처음으로</a>
+    </div>
+</main>
+</body>
+</html>

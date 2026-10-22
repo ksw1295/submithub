@@ -1,0 +1,36 @@
+# 기본 프로필: MariaDB 없이 H2 파일 DB 로 바로 실행된다.
+# MariaDB 로 실행하려면 --spring.profiles.active=mariadb (docker-compose.yml 참고)
+spring:
+  application:
+    name: submithub
+  datasource:
+    url: jdbc:h2:file:./data/submithub;MODE=MariaDB;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+  thymeleaf:
+    cache: false
+  config:
+    import: optional:file:./application-local.yml
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+submithub:
+  storage-dir: ./uploads
+  demo-data: true
+  professor-signup-code: ""
+  max-file-bytes: 5242880
+  max-total-bytes: 20971520
+  max-files: 200

@@ -1,0 +1,28 @@
+target/
+*.class
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# 로컬 설정 / 비밀 정보
+application-local.yml
+application-local.properties
+.env
+
+# 업로드된 제출 파일
+uploads/
+submissions/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# H2 파일 DB
+data/

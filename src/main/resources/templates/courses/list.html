@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title>내 강의</title></head>
+<body>
+<main>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">내 강의</h1>
+        <div>
+            <a class="btn btn-primary" sec:authorize="hasRole('PROFESSOR')" th:href="@{/courses/new}">강의 개설</a>
+            <a class="btn btn-primary" sec:authorize="hasRole('STUDENT')" th:href="@{/courses/join}">초대 코드로 수강 등록</a>
+        </div>
+    </div>
+    <div class="alert alert-secondary" th:if="${#lists.isEmpty(courses)}">
+        <span sec:authorize="hasRole('PROFESSOR')">아직 개설한 강의가 없습니다. 강의를 개설하면 학생에게 줄 초대 코드가 발급됩니다.</span>
+        <span sec:authorize="hasRole('STUDENT')">아직 수강 중인 강의가 없습니다. 교수에게 받은 초대 코드를 입력하세요.</span>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4" th:each="c : ${courses}">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 card-title" th:text="${c.name}">강의명</h2>
+                    <p class="text-muted mb-0" th:text="${c.semester}">학기</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

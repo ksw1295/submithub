@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>회원가입</title></head>
+<body>
+<main>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h4 mb-3">회원가입</h1>
+                    <form th:action="@{/signup}" th:object="${form}" method="post" novalidate>
+                        <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">역할</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="roleStudent" th:field="*{role}" value="STUDENT">
+                                    <label class="form-check-label" for="roleStudent">학생</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="roleProfessor" th:field="*{role}" value="PROFESSOR">
+                                    <label class="form-check-label" for="roleProfessor">교수</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="loginId">아이디</label>
+                            <input class="form-control" th:errorclass="is-invalid" th:field="*{loginId}">
+                            <div class="invalid-feedback" th:errors="*{loginId}"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="password">비밀번호</label>
+                                <input class="form-control" type="password" th:errorclass="is-invalid" th:field="*{password}">
+                                <div class="invalid-feedback" th:errors="*{password}"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="passwordConfirm">비밀번호 확인</label>
+                                <input class="form-control" type="password" th:errorclass="is-invalid" th:field="*{passwordConfirm}">
+                                <div class="invalid-feedback" th:errors="*{passwordConfirm}"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="name">이름</label>
+                            <input class="form-control" th:errorclass="is-invalid" th:field="*{name}">
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="studentNo">학번 <small class="text-muted">(학생)</small></label>
+                                <input class="form-control" th:errorclass="is-invalid" th:field="*{studentNo}">
+                                <div class="invalid-feedback" th:errors="*{studentNo}"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="department">학과</label>
+                                <input class="form-control" th:errorclass="is-invalid" th:field="*{department}">
+                                <div class="invalid-feedback" th:errors="*{department}"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="professorCode">교수 가입 코드 <small class="text-muted">(서버에 코드가 설정된 경우에만)</small></label>
+                            <input class="form-control" th:field="*{professorCode}">
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit">가입하기</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

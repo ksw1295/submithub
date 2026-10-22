@@ -1,0 +1,4 @@
+body { background: #f6f7f9; }
+.card { border-color: #e3e6ea; }
+code, pre, .code { font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+.table > :not(caption) > * > * { vertical-align: middle; }

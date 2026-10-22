@@ -19,6 +19,8 @@
             <div class="text-muted small">
                 <span th:text="${#temporals.format(sub.submittedAt, 'yyyy-MM-dd HH:mm')}">시각</span>
                 <span th:if="${sub.message != null and !sub.message.isEmpty()}" th:text="'· ' + ${sub.message}"></span>
+                <a class="badge text-bg-dark text-decoration-none" th:if="${sub.sourceUrl != null}" th:href="${sub.sourceUrl}"
+                   target="_blank" rel="noopener noreferrer" th:text="'GitHub ' + ${sub.sourceLabel}">GitHub</a>
             </div>
         </div>
         <div class="d-flex gap-2 align-items-start">

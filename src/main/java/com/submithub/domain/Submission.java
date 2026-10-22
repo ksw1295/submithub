@@ -46,6 +46,13 @@ public class Submission {
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private LocalDateTime submittedAt;
 
+    /** GitHub 커밋으로 제출한 경우: "owner/repo" 와 커밋 SHA (파일 업로드로 낸 버전은 null) */
+    @Column(name = "source_repo", length = 200, updatable = false)
+    private String sourceRepo;
+
+    @Column(name = "source_commit", length = 40, updatable = false)
+    private String sourceCommit;
+
     @OneToMany(mappedBy = "submission", cascade = CascadeType.PERSIST)
     @OrderBy("path ASC")
     private List<SubmissionFile> files = new ArrayList<>();
@@ -58,6 +65,24 @@ public class Submission {
         this.message = message;
         this.late = late;
         this.submittedAt = submittedAt;
+    }
+
+    /** GitHub 커밋 출처를 기록한다 (저장 전에만 호출) */
+    public void setSource(String repo, String commitSha) {
+        this.sourceRepo = repo;
+        this.sourceCommit = commitSha;
+    }
+
+    public boolean fromGitHub() {
+        return sourceCommit != null;
+    }
+
+    public String sourceUrl() {
+        return fromGitHub() ? "https://github.com/" + sourceRepo + "/commit/" + sourceCommit : null;
+    }
+
+    public String sourceLabel() {
+        return fromGitHub() ? sourceRepo + "@" + sourceCommit.substring(0, Math.min(7, sourceCommit.length())) : null;
     }
 
     public void addFile(SubmissionFile file) {

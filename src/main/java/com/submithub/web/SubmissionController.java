@@ -70,6 +70,19 @@ public class SubmissionController {
         return "redirect:/submissions/" + result.id();
     }
 
+    @PostMapping("/assignments/{id}/submit/github")
+    @PreAuthorize("hasRole('STUDENT')")
+    public String submitGitHub(@PathVariable Long id, @AuthenticationPrincipal AppUser user,
+                               @RequestParam(value = "repoUrl", required = false) String repoUrl,
+                               @RequestParam(value = "ref", required = false) String ref,
+                               @RequestParam(value = "message", required = false) String message,
+                               RedirectAttributes redirect) {
+        var result = submissionService.submitFromGitHub(id, user, repoUrl, ref, message);
+        redirect.addFlashAttribute("message", "GitHub 커밋을 v" + result.versionNo() + " 로 제출했습니다."
+                + (result.late() ? " (지각 제출)" : ""));
+        return "redirect:/submissions/" + result.id();
+    }
+
     @GetMapping("/assignments/{aid}/students/{sid}")
     public String history(@PathVariable Long aid, @PathVariable Long sid, @AuthenticationPrincipal AppUser user,
                           Model model, HttpServletRequest request) {

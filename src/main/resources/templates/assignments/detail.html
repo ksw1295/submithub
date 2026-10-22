@@ -59,6 +59,23 @@
                     </div>
                     <button class="btn btn-primary" type="submit">제출</button>
                 </form>
+                <hr th:if="${assignment.open}">
+                <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit/github(id=${assignment.id})}" method="post">
+                    <div class="fw-bold mb-2">또는 GitHub 커밋으로 제출</div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-8">
+                            <label class="form-label small mb-1" for="repoUrl">공개 저장소 주소</label>
+                            <input class="form-control" id="repoUrl" name="repoUrl" maxlength="300" placeholder="https://github.com/내아이디/저장소" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small mb-1" for="ref">브랜치 또는 커밋 SHA</label>
+                            <input class="form-control" id="ref" name="ref" maxlength="200" placeholder="비우면 기본 브랜치">
+                        </div>
+                    </div>
+                    <input class="form-control mb-2" name="message" maxlength="500" placeholder="제출 메모 (비우면 커밋 메시지 첫 줄)">
+                    <div class="form-text mb-2">github.com 의 공개 저장소만 가능합니다. 소스 파일(.java, .py, .c 등)만 가져오고, 직전 버전과 같은 커밋은 다시 제출할 수 없습니다.</div>
+                    <button class="btn btn-dark" type="submit">GitHub 에서 가져와 제출</button>
+                </form>
             </div>
         </div>
 

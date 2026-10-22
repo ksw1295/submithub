@@ -58,6 +58,46 @@ public class UploadProcessor {
         return result;
     }
 
+    /**
+     * GitHub zipball 처럼 맨 위에 "저장소-SHA/" 폴더가 하나 있는 zip 에서, 받아들일 경로의 파일만 꺼낸다.
+     * 맨 위 폴더는 떼고, 경로 검사·크기·파일 수 제한은 일반 업로드와 같다 (받아들이지 않을 파일은 읽지 않는다).
+     *
+     * @param accept 맨 위 폴더를 뗀 경로를 보고 받아들일지 정한다
+     */
+    public List<Processed> processRepositoryZip(byte[] zipBytes, java.util.function.Predicate<String> accept) {
+        Map<String, byte[]> out = new LinkedHashMap<>();
+        long[] total = {0};
+        int entries = 0;
+        try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(zipBytes), StandardCharsets.UTF_8)) {
+            ZipEntry e;
+            while ((e = zin.getNextEntry()) != null) {
+                if (e.isDirectory()) {
+                    continue;
+                }
+                if (++entries > 20_000) {
+                    throw new BusinessException("저장소에 파일이 너무 많습니다.");
+                }
+                String path = normalizeZipPath(e.getName());
+                if (path == null || path.indexOf('/') < 0) {
+                    continue;
+                }
+                path = path.substring(path.indexOf('/') + 1);
+                if (!accept.test(path)) {
+                    continue;
+                }
+                add(out, path, readLimited(zin, path), total);
+            }
+        } catch (IllegalArgumentException | IOException ex) {
+            throw new BusinessException("GitHub 에서 받은 파일을 읽을 수 없습니다.");
+        }
+        if (out.isEmpty()) {
+            throw new BusinessException("제출할 수 있는 소스 파일이 저장소에 없습니다.");
+        }
+        List<Processed> result = new ArrayList<>();
+        out.forEach((p, bytes) -> result.add(new Processed(p, bytes)));
+        return result;
+    }
+
     /** 업로드 파일명에서 경로를 떼고 이름만 남긴다 */
     static String baseName(String filename) {
         if (filename == null) {

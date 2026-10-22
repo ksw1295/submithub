@@ -29,7 +29,9 @@
                     <span class="badge text-bg-warning" th:if="${v.late}">지각</span>
                 </td>
                 <td th:text="${#temporals.format(v.submittedAt, 'yyyy-MM-dd HH:mm')}">시각</td>
-                <td th:text="${v.message}">메모</td>
+                <td><span th:text="${v.message}">메모</span>
+                    <a class="badge text-bg-dark text-decoration-none ms-1" th:if="${v.sourceUrl != null}" th:href="${v.sourceUrl}"
+                       target="_blank" rel="noopener noreferrer" th:text="'GitHub ' + ${v.sourceLabel}">GitHub</a></td>
                 <td th:text="${v.fileCount} + '개 · ' + ${#numbers.formatDecimal(v.totalSize / 1024.0, 1, 1)} + 'KB'">파일</td>
                 <td>
                     <span class="text-success" th:if="${v.added > 0}" th:text="'+' + ${v.added}"></span>

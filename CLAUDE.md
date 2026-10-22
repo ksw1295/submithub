@@ -9,8 +9,8 @@
   - Myers diff, 좌우 분할 행 생성, 피드백 반영 추적(LineTracker), Winnowing 표절 검사, UTF-8/CP949 디코딩
   - 테스트 28개 통과 확인됨. 동작을 바꿀 때는 테스트도 같이 고친다.
 - PLAN.md 7장 1~6주차 **구현 완료** (필수 항목 전부). 웹 서비스(회원·강의·과제·제출·diff·코드 리뷰·반영 추적·표절 검사·통계)와
-  시연 데이터(`demo/`), Docker Compose 구성, README 가 있다. `mvn test` 전체 통과 (113개).
-  "여유가 있으면" 항목(자동 채점, AI 피드백, 메일 알림)은 하지 않았다.
+  시연 데이터(`demo/`), Docker Compose 구성, README 가 있다. `mvn test` 전체 통과 (고도화 2차까지 247개, Docker 가 필요한 3개는 이 PC 에서 건너뜀).
+  "여유가 있으면" 항목 중 AI 판정·자동 채점·GitHub 제출은 고도화 2차(PLAN.md 8장)에서 했고, 메일 알림은 하지 않았다.
 - Docker Compose 는 개발 PC 에 Docker 가 없어 실제 실행은 확인하지 못했다. MariaDB 프로필도 H2(MariaDB 모드)로만 검증했다.
 - GitHub 원격 저장소는 아직 연결하지 않았다 (`git remote add origin ...` 필요).
 
@@ -40,3 +40,4 @@
 `D:\Dev\Workspaces\capstone\sql\schema.sql` (스키마). 새 프로젝트에 복사하지 말고 설계 참고용으로만 본다.
 
 - 자동 채점: 학생 코드는 `DockerGradingRunner`(docker CLI, 격리 옵션은 `DockerCommands`)로만 실행한다. 호스트에서 직접 실행하는 경로를 만들지 않는다. 테스트는 `FakeGradingRunner` 를 쓰고(`@GradingTest`), 실제 컨테이너 테스트는 Docker 가 있을 때만 돈다. 시연 데이터에는 채점 결과를 넣지 않는다.
+- GitHub 제출: 호출 대상은 api.github.com 과 codeload.github.com 뿐이다. 학생 입력(주소·브랜치)은 `GitHubRepoRef` 검증을 거친 값만 쓰고, 리다이렉트는 허용 호스트일 때만 따라간다. 토큰(`GITHUB_TOKEN`, 선택)은 환경변수로만 읽고 다운로드 서버로 보내지 않는다. 테스트는 `FakeGitHubClient`(`@GitHubTest`)를 쓴다.

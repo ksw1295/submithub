@@ -12,6 +12,9 @@ import com.submithub.domain.SubmissionRepository;
 import com.submithub.domain.User;
 import com.submithub.domain.UserRepository;
 import com.submithub.security.AppUser;
+import com.submithub.github.GitHubClient;
+import com.submithub.github.GitHubFetcher;
+import com.submithub.github.GitHubRepoRef;
 import com.submithub.storage.FileStorage;
 import com.submithub.storage.Hashing;
 import com.submithub.storage.UploadProcessor;
@@ -43,7 +46,7 @@ public class SubmissionService {
     /** 버전 타임라인 한 줄. added/modified/removed 는 직전 버전과 비교한 파일 수 */
     public record VersionRow(Long id, int versionNo, String message, boolean late, LocalDateTime submittedAt,
                              int fileCount, long totalSize, int added, int modified, int removed, Integer score,
-                             String autoLabel, int autoPercent) {
+                             String autoLabel, int autoPercent, String sourceLabel, String sourceUrl) {
     }
 
     public record HistoryView(Long assignmentId, String assignmentTitle, Long courseId, Long studentId,
@@ -71,7 +74,8 @@ public class SubmissionService {
                                  String selectedCharset, long selectedSize, List<VersionLink> versions,
                                  Map<Integer, List<ReviewService.CommentThread>> threadsByEndLine,
                                  GradeService.GradeView grade, Long prevSubmissionId,
-                                 Map<Long, FeedbackService.TrackedComment> tracking) {
+                                 Map<Long, FeedbackService.TrackedComment> tracking,
+                                 String sourceLabel, String sourceUrl) {
     }
 
     public record Download(String filename, byte[] bytes) {
@@ -92,13 +96,14 @@ public class SubmissionService {
     private final FeedbackService feedback;
     private final AiJudgeService aiJudge;
     private final GradingService grading;
+    private final GitHubFetcher github;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
                              UploadProcessor processor, FileStorage storage, ReviewService reviews,
                              GradeService grades, FeedbackService feedback, AiJudgeService aiJudge,
-                             GradingService grading, PlatformTransactionManager txManager) {
+                             GradingService grading, GitHubFetcher github, PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -111,6 +116,7 @@ public class SubmissionService {
         this.feedback = feedback;
         this.aiJudge = aiJudge;
         this.grading = grading;
+        this.github = github;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -122,17 +128,67 @@ public class SubmissionService {
         if (student.isProfessor()) {
             throw new ForbiddenException("학생만 제출할 수 있습니다.");
         }
+        String memo = memoOf(message);
+        // 파일 검사·해시·문자집합 판별은 락을 잡기 전에 끝낸다
+        List<Prepared> prepared = prepare(processor.process(uploads));
+        return commit(assignmentId, student, prepared, memo, null, null);
+    }
+
+    private static String memoOf(String message) {
         String memo = message == null ? null : message.strip();
         if (memo != null && memo.length() > 500) {
             throw new BusinessException("제출 메모는 500자 이하로 입력하세요.");
         }
-        // 파일 검사·해시·문자집합 판별은 락을 잡기 전에 끝낸다
-        List<Prepared> prepared = prepare(processor.process(uploads));
+        return memo;
+    }
+
+    /**
+     * GitHub 공개 저장소의 커밋을 새 버전으로 제출한다. 저장소 주소는 github.com 만 허용하고, 브랜치(또는 SHA)가 가리키는
+     * 커밋의 소스 파일을 받아 저장한다. 직전 버전과 같은 커밋이면 "변경 없음"으로 막는다 (이미 낸 커밋을 되돌려 다시
+     * 내는 것은 새 버전으로 인정한다). 메모를 비우면 커밋 메시지 첫 줄을 쓴다.
+     */
+    public SubmitResult submitFromGitHub(Long assignmentId, AppUser student, String repoUrl, String branchOrSha,
+                                         String message) {
+        if (student.isProfessor()) {
+            throw new ForbiddenException("학생만 제출할 수 있습니다.");
+        }
+        GitHubRepoRef ref = GitHubRepoRef.parse(repoUrl, branchOrSha);
+        String userMemo = memoOf(message);
+        Assignment assignment = access.assignment(assignmentId, student);
+        LocalDateTime now = LocalDateTime.now();
+        if (!assignment.isOpen(now)) {
+            throw new BusinessException(assignment.isAllowLate()
+                    ? "지각 제출 기한이 지나 제출할 수 없습니다."
+                    : "마감되어 제출할 수 없습니다.");
+        }
+        GitHubClient.Commit commit = github.resolve(ref);
+        rejectSameCommit(assignmentId, student.getId(), ref.fullName(), commit.sha());   // 파일을 받기 전에 먼저 막는다
+        List<Prepared> prepared = prepare(github.files(ref, commit.sha()));
+        String memo = userMemo != null && !userMemo.isEmpty() ? userMemo : commitTitle(commit.message());
+        return commit(assignmentId, student, prepared, memo, ref.fullName(), commit.sha());
+    }
+
+    static String commitTitle(String commitMessage) {
+        String first = commitMessage == null ? "" : commitMessage.strip().split("\\R", 2)[0].strip();
+        return first.length() > 500 ? first.substring(0, 497) + "..." : first;
+    }
+
+    private void rejectSameCommit(Long assignmentId, Long studentId, String repo, String sha) {
+        submissions.findTopByAssignmentIdAndStudentIdOrderByVersionNoDesc(assignmentId, studentId)
+                .filter(last -> sha.equals(last.getSourceCommit()) && repo.equalsIgnoreCase(last.getSourceRepo()))
+                .ifPresent(last -> {
+                    throw new BusinessException("변경 없음: 이 커밋(" + sha.substring(0, 7) + ")은 이미 v" + last.getVersionNo()
+                            + " 로 제출했습니다. 새로 커밋하고 푸시한 뒤 다시 제출하세요.");
+                });
+    }
+
+    private SubmitResult commit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo,
+                                String sourceRepo, String sourceCommit) {
         SubmitResult result;
         try {
-            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit));
         } catch (DataIntegrityViolationException e) {
-            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit));
         }
         // 제출이 커밋된 뒤에, 강의에서 AI 판정을 켰다면 비동기로 반영 판정을 시작한다 (실패해도 제출에는 영향 없음)
         aiJudge.onNewVersion(assignmentId, student.getId());
@@ -141,7 +197,8 @@ public class SubmissionService {
         return result;
     }
 
-    private SubmitResult doSubmit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo) {
+    private SubmitResult doSubmit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo,
+                                  String sourceRepo, String sourceCommit) {
         access.assignment(assignmentId, student);   // 수강 중인 강의의 과제인지
         Assignment assignment = assignments.findByIdForUpdate(assignmentId)
                 .orElseThrow(() -> new NotFoundException("과제를 찾을 수 없습니다."));
@@ -151,9 +208,15 @@ public class SubmissionService {
                     ? "지각 제출 기한이 지나 제출할 수 없습니다."
                     : "마감되어 제출할 수 없습니다.");
         }
+        if (sourceCommit != null) {
+            rejectSameCommit(assignmentId, student.getId(), sourceRepo, sourceCommit);   // 락 안에서 한 번 더 (동시 제출 대비)
+        }
         int version = submissions.maxVersion(assignmentId, student.getId()) + 1;
         User owner = users.getReferenceById(student.getId());
         Submission submission = new Submission(assignment, owner, version, memo, assignment.isPastDue(now), now);
+        if (sourceCommit != null) {
+            submission.setSource(sourceRepo, sourceCommit);
+        }
 
         List<String> written = new ArrayList<>();
         // 트랜잭션이 롤백되면 이미 디스크에 쓴 파일을 지운다
@@ -227,7 +290,8 @@ public class SubmissionService {
             rows.add(new VersionRow(s.getId(), s.getVersionNo(), s.getMessage(), s.isLate(), s.getSubmittedAt(),
                     s.getFiles().size(), total, added, modified, removed, grades.score(s.getId()),
                     auto.containsKey(s.getId()) ? auto.get(s.getId()).label() : null,
-                    auto.containsKey(s.getId()) ? auto.get(s.getId()).percent() : -1));
+                    auto.containsKey(s.getId()) ? auto.get(s.getId()).percent() : -1,
+                    s.sourceLabel(), s.sourceUrl()));
             previous = current;
         }
         java.util.Collections.reverse(rows);   // 최신 버전이 위로
@@ -288,7 +352,7 @@ public class SubmissionService {
                 selected != null && selected.isBinary(),
                 selected == null ? null : selected.getCharset(),
                 selected == null ? 0 : selected.getSize(), versions, threads, grades.get(s.getId()), prevId,
-                trackingOf(s));
+                trackingOf(s), s.sourceLabel(), s.sourceUrl());
     }
 
     /** 이 버전보다 새 버전이 있을 때만, 코멘트가 지금 어떻게 되었는지(반영 상태)를 코멘트 ID 별로 돌려준다 */

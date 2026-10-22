@@ -27,14 +27,17 @@ public class CourseService {
     private final UserRepository users;
     private final AccessService access;
     private final AssignmentService assignmentService;
+    private final AiJudgeService aiJudge;
 
     public CourseService(CourseRepository courses, EnrollmentRepository enrollments, UserRepository users,
-                         AccessService access, AssignmentService assignmentService) {
+                         AccessService access, AssignmentService assignmentService,
+                         AiJudgeService aiJudge) {
         this.courses = courses;
         this.enrollments = enrollments;
         this.users = users;
         this.access = access;
         this.assignmentService = assignmentService;
+        this.aiJudge = aiJudge;
     }
 
     public record CourseSummary(Long id, String name, String semester, String professorName, long studentCount) {
@@ -45,7 +48,8 @@ public class CourseService {
 
     public record CourseDetail(Long id, String name, String semester, String professorName,
                                String inviteCode, List<StudentRow> students,
-                               List<AssignmentService.AssignmentRow> assignments) {
+                               List<AssignmentService.AssignmentRow> assignments,
+                               boolean aiJudgeEnabled, boolean aiAvailable) {
     }
 
     /** 교수는 자기가 개설한 강의, 학생은 수강 중인 강의 */
@@ -111,7 +115,8 @@ public class CourseService {
         return new CourseDetail(course.getId(), course.getName(), course.getSemester(),
                 course.getProfessor().getName(),
                 user.isProfessor() ? course.getInviteCode() : null,
-                students, assignmentService.rowsFor(course, user));
+                students, assignmentService.rowsFor(course, user),
+                course.isAiJudgeEnabled() && aiJudge.available(), aiJudge.available());
     }
 
     static String newInviteCode() {

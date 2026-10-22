@@ -89,12 +89,13 @@ public class SubmissionService {
     private final ReviewService reviews;
     private final GradeService grades;
     private final FeedbackService feedback;
+    private final AiJudgeService aiJudge;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
                              UploadProcessor processor, FileStorage storage, ReviewService reviews,
-                             GradeService grades, FeedbackService feedback, PlatformTransactionManager txManager) {
+                             GradeService grades, FeedbackService feedback, AiJudgeService aiJudge, PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -105,6 +106,7 @@ public class SubmissionService {
         this.reviews = reviews;
         this.grades = grades;
         this.feedback = feedback;
+        this.aiJudge = aiJudge;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -122,11 +124,15 @@ public class SubmissionService {
         }
         // 파일 검사·해시·문자집합 판별은 락을 잡기 전에 끝낸다
         List<Prepared> prepared = prepare(processor.process(uploads));
+        SubmitResult result;
         try {
-            return tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
         } catch (DataIntegrityViolationException e) {
-            return tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo));
         }
+        // 제출이 커밋된 뒤에, 강의에서 AI 판정을 켰다면 비동기로 반영 판정을 시작한다 (실패해도 제출에는 영향 없음)
+        aiJudge.onNewVersion(assignmentId, student.getId());
+        return result;
     }
 
     private SubmitResult doSubmit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo) {

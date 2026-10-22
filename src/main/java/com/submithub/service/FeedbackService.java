@@ -1,6 +1,8 @@
 package com.submithub.service;
 
 import com.submithub.core.review.LineTracker;
+import com.submithub.domain.AiJudgement;
+import com.submithub.domain.AiJudgementRepository;
 import com.submithub.domain.ReviewComment;
 import com.submithub.domain.ReviewCommentRepository;
 import com.submithub.domain.Submission;
@@ -28,10 +30,20 @@ public class FeedbackService {
     public record TrackedComment(Long commentId, int commentVersion, Long commentSubmissionId, Long commentFileId,
                                  String path, int startLine, int endLine, String body, String status,
                                  int latestStart, int latestEnd, int changedAtVersion, int latestVersion,
-                                 Long latestSubmissionId, Long latestFileId, boolean markedResolved) {
+                                 Long latestSubmissionId, Long latestFileId, boolean markedResolved,
+                                 Long aiJudgementId, String aiVerdict, String aiReason, String aiDecision) {
+        /**
+         * 교수가 수락한 AI 판정이 "줄은 바뀌었지만 아직 해결되지 않음(PARTIAL/NOT_RESOLVED)"인 경우.
+         * 이때는 줄이 바뀐 코멘트라도 반영된 것으로 세지 않고 남은 피드백으로 본다. 수락하지 않은 판정은 숫자에 영향이 없다.
+         */
+        public boolean aiOverride() {
+            return status.equals("MODIFIED") && "ACCEPTED".equals(aiDecision)
+                    && ("PARTIAL".equals(aiVerdict) || "NOT_RESOLVED".equals(aiVerdict));
+        }
+
         /** 학생이 아직 고쳐야 하는 피드백인가 */
         public boolean remaining() {
-            return status.equals("UNCHANGED") || status.equals("PENDING");
+            return status.equals("UNCHANGED") || status.equals("PENDING") || aiOverride();
         }
     }
 
@@ -73,7 +85,7 @@ public class FeedbackService {
         static FeedbackSummary of(List<TrackedComment> items) {
             int unchanged = 0, modified = 0, deleted = 0, pending = 0;
             for (TrackedComment c : items) {
-                switch (c.status()) {
+                switch (c.aiOverride() ? "UNCHANGED" : c.status()) {
                     case "UNCHANGED" -> unchanged++;
                     case "MODIFIED" -> modified++;
                     case "DELETED" -> deleted++;
@@ -92,8 +104,11 @@ public class FeedbackService {
     private final SubmissionRepository submissions;
     private final ReviewCommentRepository comments;
     private final AccessService access;
+    private final AiJudgementRepository aiJudgements;
 
-    public FeedbackService(SubmissionRepository submissions, ReviewCommentRepository comments, AccessService access) {
+    public FeedbackService(SubmissionRepository submissions, ReviewCommentRepository comments, AccessService access,
+                           AiJudgementRepository aiJudgements) {
+        this.aiJudgements = aiJudgements;
         this.submissions = submissions;
         this.comments = comments;
         this.access = access;
@@ -143,6 +158,14 @@ public class FeedbackService {
             fileOf.put(s.getVersionNo(), f);
         }
 
+        // 판정 시점의 최신 버전에 대한 AI 판정만 쓴다 (새 버전이 나오면 다시 판정해야 한다)
+        Map<Long, AiJudgement> ai = new HashMap<>();
+        for (AiJudgement j : aiJudgements.findByCommentIdIn(roots.stream().map(ReviewComment::getId).toList())) {
+            if (j.getVersionNo() == latest.getVersionNo()) {
+                ai.put(j.getComment().getId(), j);
+            }
+        }
+
         List<TrackedComment> items = new ArrayList<>();
         for (ReviewComment c : roots) {
             SubmissionFile cf = c.getSubmissionFile();
@@ -170,10 +193,13 @@ public class FeedbackService {
                     changedAt = fromVersion + r.changedAtIndex();
                 }
             }
+            AiJudgement aiJ = ai.get(c.getId());
             items.add(new TrackedComment(c.getId(), fromVersion, cf.getSubmission().getId(), cf.getId(), path,
                     c.getStartLine(), c.getEndLine(), c.getBody(), status, ls, le, changedAt,
                     latest.getVersionNo(), latest.getId(), latestFile == null ? null : latestFile.getId(),
-                    c.isResolvedByStudent()));
+                    c.isResolvedByStudent(), aiJ == null ? null : aiJ.getId(),
+                    aiJ == null ? null : aiJ.getVerdict().name(), aiJ == null ? null : aiJ.getReason(),
+                    aiJ == null ? null : aiJ.getDecision().name()));
         }
         return new FeedbackView(items, FeedbackSummary.of(items));
     }

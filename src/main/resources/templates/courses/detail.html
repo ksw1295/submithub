@@ -18,6 +18,32 @@
         </div>
     </div>
 
+    <!--/* AI 반영 판정: 서버에 API 키가 있을 때만 보인다. 교수가 켜고 끄고, 켜져 있으면 학생에게도 안내한다 */-->
+    <div class="card shadow-sm mb-4" sec:authorize="hasRole('PROFESSOR')" th:if="${course.aiAvailable}" id="aiSettings">
+        <div class="card-body py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <strong>🤖 AI 반영 판정</strong>
+                <span class="badge" th:classappend="${course.aiJudgeEnabled} ? 'text-bg-success' : 'text-bg-secondary'"
+                      th:text="${course.aiJudgeEnabled} ? '사용 중' : '꺼짐'">꺼짐</span>
+                <div class="small text-muted mt-1">
+                    코멘트가 달린 줄이 바뀐 경우, 바뀐 코드가 코멘트를 실제로 해결했는지 AI(Google Gemini)가 한 번 더 판정합니다.
+                    <strong>켜면 코멘트가 달린 줄 주변의 학생 코드가 외부 AI 서비스로 전송됩니다.</strong>
+                    학생에게 미리 알려 주세요. 판정은 참고용이며 교수가 수락한 것만 반영률에 반영됩니다.
+                </div>
+            </div>
+            <form method="post" th:action="@{/courses/{id}/ai-judge(id=${course.id})}">
+                <input type="hidden" name="enabled" th:value="${!course.aiJudgeEnabled}">
+                <button class="btn btn-sm text-nowrap" type="submit"
+                        th:classappend="${course.aiJudgeEnabled} ? 'btn-outline-secondary' : 'btn-outline-primary'"
+                        th:text="${course.aiJudgeEnabled} ? '끄기' : '켜기'">켜기</button>
+            </form>
+        </div>
+    </div>
+    <div class="alert alert-info small" sec:authorize="hasRole('STUDENT')" th:if="${course.aiJudgeEnabled}">
+        🤖 이 강의는 <strong>AI 반영 판정</strong>을 사용합니다. 교수가 남긴 코멘트가 달린 줄 주변의 내 코드가
+        외부 AI 서비스(Google Gemini)로 전송되어, 코멘트를 해결했는지 판정하는 데 쓰입니다.
+    </div>
+
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>과제</strong>

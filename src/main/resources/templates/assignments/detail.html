@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <th:block th:replace="~{submissions/fragments :: feedbackCard(${feedback}, true)}"></th:block>
+        <th:block th:replace="~{submissions/fragments :: feedbackCard(${feedback}, true, false, null, null, null)}"></th:block>
 
         <div class="card shadow-sm mb-4">
             <div class="card-header"><strong>내 제출 이력</strong> <span class="text-muted" th:text="${#lists.size(history.versions)} + '개 버전'"></span></div>

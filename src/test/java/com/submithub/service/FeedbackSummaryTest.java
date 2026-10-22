@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FeedbackSummaryTest {
 
     static TrackedComment c(String status) {
-        return new TrackedComment(1L, 1, 1L, 1L, "A.java", 1, 1, "x", status, 0, 0, 0, 2, 2L, 2L, false);
+        return new TrackedComment(1L, 1, 1L, 1L, "A.java", 1, 1, "x", status, 0, 0, 0, 2, 2L, 2L, false, null, null, null, null);
     }
 
     static FeedbackSummary of(String... statuses) {

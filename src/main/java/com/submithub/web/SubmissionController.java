@@ -1,6 +1,7 @@
 package com.submithub.web;
 
 import com.submithub.security.AppUser;
+import com.submithub.service.AiJudgeService;
 import com.submithub.service.BusinessException;
 import com.submithub.service.DiffService;
 import com.submithub.service.FeedbackService;
@@ -33,12 +34,14 @@ public class SubmissionController {
     private final SubmissionService submissionService;
     private final DiffService diffService;
     private final FeedbackService feedbackService;
+    private final AiJudgeService aiJudge;
 
     public SubmissionController(SubmissionService submissionService, DiffService diffService,
-                                FeedbackService feedbackService) {
+                                FeedbackService feedbackService, AiJudgeService aiJudge) {
         this.submissionService = submissionService;
         this.diffService = diffService;
         this.feedbackService = feedbackService;
+        this.aiJudge = aiJudge;
     }
 
     @PostMapping("/assignments/{id}/submit")
@@ -65,10 +68,12 @@ public class SubmissionController {
 
     @GetMapping("/assignments/{aid}/students/{sid}")
     public String history(@PathVariable Long aid, @PathVariable Long sid, @AuthenticationPrincipal AppUser user,
-                          Model model) {
+                          Model model, HttpServletRequest request) {
         model.addAttribute("history", submissionService.history(aid, sid, user));
         model.addAttribute("feedback", feedbackService.forStudent(aid, sid, user));
         model.addAttribute("canComment", user.isProfessor());
+        model.addAttribute("aiEnabled", user.isProfessor() && aiJudge.enabledForAssignment(aid));
+        model.addAttribute("back", currentUrl(request));
         return "submissions/history";
     }
 

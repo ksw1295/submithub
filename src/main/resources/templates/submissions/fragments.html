@@ -104,7 +104,7 @@
 </span>
 
 <!-- 피드백 반영 현황 카드. feedback = FeedbackService.FeedbackView, student = 학생 화면이면 true -->
-<div class="card shadow-sm mb-4" th:fragment="feedbackCard(feedback, student)" id="feedback">
+<div class="card shadow-sm mb-4" th:fragment="feedbackCard(feedback, student, aiEnabled, aid, sid, back)" id="feedback">
     <div class="card-header d-flex justify-content-between align-items-center">
         <strong th:text="${student} ? ('남은 피드백 ' + ${feedback.summary.remaining} + '개') : '피드백 반영 현황'">피드백</strong>
         <span class="small text-muted" th:if="${feedback.summary.total > 0}">
@@ -115,6 +115,13 @@
             <span th:if="${feedback.summary.pending > 0}" th:text="'· 새 코멘트 ' + ${feedback.summary.pending}"></span>
             <strong class="ms-2" th:if="${feedback.summary.hasRate}" th:text="'반영률 ' + ${feedback.summary.ratePercent} + '%'"></strong>
         </span>
+    </div>
+    <div class="px-3 py-2 border-bottom bg-light small d-flex justify-content-between align-items-center gap-2" th:if="${aiEnabled and !student}">
+        <span class="text-muted">줄이 바뀐 코멘트가 실제로 해결됐는지 AI 가 한 번 더 판정합니다. 참고용이며, 교수가 수락한 판정만 반영률에 영향을 줍니다.</span>
+        <form method="post" th:action="@{/assignments/{a}/students/{s}/ai-judge(a=${aid},s=${sid})}">
+            <input type="hidden" name="back" th:value="${back}">
+            <button class="btn btn-sm btn-outline-primary text-nowrap" type="submit">🤖 AI 판정 실행</button>
+        </form>
     </div>
     <div class="card-body" th:if="${#lists.isEmpty(feedback.items)}">
         <span class="text-muted" th:text="${student} ? '아직 받은 피드백이 없습니다.' : '남긴 코멘트가 없습니다.'">없음</span>
@@ -142,6 +149,7 @@
                 </div>
             </div>
             <div class="small mt-1" style="white-space: pre-wrap" th:text="${#strings.abbreviate(c.body, 120)}">내용</div>
+            <div th:replace="~{submissions/ai-judgement :: box(${c}, ${student}, ${back})}"></div>
         </li>
     </ul>
 </div>

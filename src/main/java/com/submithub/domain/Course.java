@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -29,6 +30,14 @@ public class Course {
 
     @Column(name = "invite_code", nullable = false, unique = true, length = 12)
     private String inviteCode;
+
+    /**
+     * AI 반영 판정 사용 여부 (기본 꺼짐). 켜면 코멘트 주변의 학생 코드가 외부 AI 서비스로 전송된다.
+     * columnDefinition 의 default 는 이미 데이터가 있는 DB 에 컬럼을 추가할 때(ddl-auto=update)를 위한 것이다.
+     */
+    @Setter
+    @Column(name = "ai_judge_enabled", nullable = false, columnDefinition = "boolean default false")
+    private boolean aiJudgeEnabled;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>수강 등록</title></head>
+<body>
+<main>
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h4 mb-3">초대 코드로 수강 등록</h1>
+                    <form th:action="@{/courses/join}" th:object="${form}" method="post" novalidate>
+                        <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inviteCode">초대 코드</label>
+                            <input class="form-control text-uppercase" th:errorclass="is-invalid" th:field="*{inviteCode}"
+                                   placeholder="교수에게 받은 8자리 코드" autofocus autocomplete="off">
+                            <div class="invalid-feedback" th:errors="*{inviteCode}"></div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">등록하기</button>
+                        <a class="btn btn-link" th:href="@{/courses}">취소</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="${course.name}">강의</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a th:href="@{/courses}">내 강의</a></li>
+        <li class="breadcrumb-item active" th:text="${course.name}">강의</li></ol></nav>
+
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1" th:text="${course.name}">강의명</h1>
+            <div class="text-muted"><span th:text="${course.semester}">학기</span> · 담당 <span th:text="${course.professorName}">교수</span></div>
+        </div>
+        <div sec:authorize="hasRole('PROFESSOR')" class="text-end">
+            <div class="small text-muted">초대 코드</div>
+            <code class="fs-4 user-select-all" id="inviteCode" th:text="${course.inviteCode}">ABCD2345</code>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>과제</strong>
+            <a class="btn btn-sm btn-primary" sec:authorize="hasRole('PROFESSOR')"
+               th:href="@{/courses/{id}/assignments/new(id=${course.id})}">과제 등록</a>
+        </div>
+        <div class="card-body" th:if="${#lists.isEmpty(course.assignments)}"><span class="text-muted">등록된 과제가 없습니다.</span></div>
+        <div class="table-responsive" th:unless="${#lists.isEmpty(course.assignments)}">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>과제</th><th>마감</th><th>지각 허용</th><th sec:authorize="hasRole('STUDENT')">상태</th><th sec:authorize="hasRole('PROFESSOR')"></th></tr></thead>
+                <tbody>
+                <tr th:each="a : ${course.assignments}">
+                    <td><a th:href="@{/assignments/{id}(id=${a.id})}" th:text="${a.title}">과제</a></td>
+                    <td th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}">마감</td>
+                    <td><span th:if="${a.allowLate}">허용<small class="text-muted" th:if="${a.lateUntil != null}" th:text="' (~' + ${#temporals.format(a.lateUntil, 'MM-dd HH:mm')} + ')'"></small></span>
+                        <span th:unless="${a.allowLate}" class="text-muted">불가</span></td>
+                    <td sec:authorize="hasRole('STUDENT')" th:switch="${a.state}">
+                        <span th:case="'SUBMITTED'" class="badge text-bg-success">제출 완료 <span th:text="'v' + ${a.myVersions}"></span></span>
+                        <span th:case="'LATE'" class="badge text-bg-warning">지각 제출 <span th:text="'v' + ${a.myVersions}"></span></span>
+                        <span th:case="'DUE_SOON'" class="badge text-bg-danger">마감 임박</span>
+                        <span th:case="'LATE_OPEN'" class="badge text-bg-warning">마감 지남 (지각 제출 가능)</span>
+                        <span th:case="'CLOSED'" class="badge text-bg-dark">마감</span>
+                        <span th:case="*" class="badge text-bg-secondary">진행 중</span>
+                    </td>
+                    <td sec:authorize="hasRole('PROFESSOR')" class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary" th:href="@{/assignments/{id}/edit(id=${a.id})}">수정</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm" sec:authorize="hasRole('PROFESSOR')">
+        <div class="card-header"><strong>수강생</strong> <span class="text-muted" th:text="${#lists.size(course.students)} + '명'"></span></div>
+        <div class="card-body" th:if="${#lists.isEmpty(course.students)}"><span class="text-muted">아직 등록한 학생이 없습니다. 초대 코드를 알려주세요.</span></div>
+        <div class="table-responsive" th:unless="${#lists.isEmpty(course.students)}">
+            <table class="table mb-0">
+                <thead><tr><th>이름</th><th>학번</th><th>학과</th><th>등록일</th></tr></thead>
+                <tbody>
+                <tr th:each="s : ${course.students}">
+                    <td th:text="${s.name}">이름</td><td th:text="${s.studentNo}">학번</td><td th:text="${s.department}">학과</td>
+                    <td th:text="${#temporals.format(s.joinedAt, 'yyyy-MM-dd')}">날짜</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

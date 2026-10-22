@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="${assignment.title}">과제</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses}">내 강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${assignment.courseId})}" th:text="${assignment.courseName}">강의</a></li>
+        <li class="breadcrumb-item active" th:text="${assignment.title}">과제</li></ol></nav>
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <h1 class="h3 mb-0" th:text="${assignment.title}">과제</h1>
+        <a class="btn btn-outline-secondary" sec:authorize="hasRole('PROFESSOR')" th:href="@{/assignments/{id}/edit(id=${assignment.id})}">수정</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p style="white-space: pre-wrap" th:text="${assignment.description}">설명</p>
+            <dl class="row mb-0">
+                <dt class="col-sm-3">마감</dt>
+                <dd class="col-sm-9">
+                    <span th:text="${#temporals.format(assignment.dueAt, 'yyyy-MM-dd HH:mm')}">마감</span>
+                    <span class="badge text-bg-dark" th:if="${assignment.pastDue}">마감 지남</span>
+                </dd>
+                <dt class="col-sm-3">지각 제출</dt>
+                <dd class="col-sm-9">
+                    <span th:if="${!assignment.allowLate}">허용하지 않음</span>
+                    <span th:if="${assignment.allowLate}">허용
+                        <span th:if="${assignment.lateUntil != null}" th:text="'(' + ${#temporals.format(assignment.lateUntil, 'yyyy-MM-dd HH:mm')} + '까지)'"></span></span>
+                </dd>
+                <dt class="col-sm-3" sec:authorize="hasRole('PROFESSOR')">뼈대 코드</dt>
+                <dd class="col-sm-9" sec:authorize="hasRole('PROFESSOR')" th:text="${assignment.hasBaseline} ? '등록됨 (표절 검사에서 제외)' : '없음'">없음</dd>
+            </dl>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -16,12 +16,18 @@
     </div>
     <div class="row g-3">
         <div class="col-md-6 col-lg-4" th:each="c : ${courses}">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h2 class="h5 card-title" th:text="${c.name}">강의명</h2>
-                    <p class="text-muted mb-0" th:text="${c.semester}">학기</p>
+            <a class="text-decoration-none text-reset" th:href="@{/courses/{id}(id=${c.id})}">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h2 class="h5 card-title" th:text="${c.name}">강의명</h2>
+                        <p class="text-muted mb-1" th:text="${c.semester}">학기</p>
+                        <p class="small mb-0">
+                            <span sec:authorize="hasRole('STUDENT')">담당 <span th:text="${c.professorName}">교수</span></span>
+                            <span sec:authorize="hasRole('PROFESSOR')">수강생 <span th:text="${c.studentCount}">0</span>명</span>
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 </main>

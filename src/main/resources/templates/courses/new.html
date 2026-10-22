@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>강의 개설</title></head>
+<body>
+<main>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h4 mb-3">강의 개설</h1>
+                    <form th:action="@{/courses/new}" th:object="${form}" method="post" novalidate>
+                        <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="name">강의명</label>
+                            <input class="form-control" th:errorclass="is-invalid" th:field="*{name}" placeholder="예: 자료구조">
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="semester">학기</label>
+                            <input class="form-control" th:errorclass="is-invalid" th:field="*{semester}" placeholder="예: 2026-2">
+                            <div class="invalid-feedback" th:errors="*{semester}"></div>
+                        </div>
+                        <p class="text-muted small">개설하면 학생이 수강 등록에 쓸 초대 코드가 자동으로 발급됩니다.</p>
+                        <button class="btn btn-primary" type="submit">개설하기</button>
+                        <a class="btn btn-link" th:href="@{/courses}">취소</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

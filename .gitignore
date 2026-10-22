@@ -16,8 +16,8 @@ application-local.properties
 .env
 
 # 업로드된 제출 파일
-uploads/
-submissions/
+/uploads/
+/submissions/
 
 # OS
 .DS_Store
@@ -25,4 +25,7 @@ Thumbs.db
 Desktop.ini
 
 # H2 파일 DB
-data/
+/data/
+
+# docker compose 설정
+.env

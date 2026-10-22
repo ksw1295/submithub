@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="'v' + ${sub.versionNo} + ' · ' + ${sub.assignmentTitle}">제출물</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${sub.courseId})}">강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${sub.assignmentId})}" th:text="${sub.assignmentTitle}">과제</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{a}/students/{s}(a=${sub.assignmentId},s=${sub.studentId})}" th:text="${sub.studentName}">학생</a></li>
+        <li class="breadcrumb-item active" th:text="'v' + ${sub.versionNo}">v1</li></ol></nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-1">
+                <span th:text="${sub.studentName}">학생</span> · v<span th:text="${sub.versionNo}">1</span>
+                <span class="badge text-bg-warning" th:if="${sub.late}">지각 제출</span>
+                <span class="badge text-bg-primary" th:if="${sub.grade != null}" th:text="${sub.grade.score} + '점'"></span>
+            </h1>
+            <div class="text-muted small">
+                <span th:text="${#temporals.format(sub.submittedAt, 'yyyy-MM-dd HH:mm')}">시각</span>
+                <span th:if="${sub.message != null and !sub.message.isEmpty()}" th:text="'· ' + ${sub.message}"></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 align-items-start">
+            <a class="btn btn-sm btn-outline-primary" th:if="${sub.prevSubmissionId != null}"
+               th:href="@{/assignments/{a}/students/{s}/diff(a=${sub.assignmentId},s=${sub.studentId},from=${sub.prevSubmissionId},to=${sub.id})}">이전 버전과 비교</a>
+            <div class="btn-group" role="group" aria-label="버전">
+                <a th:each="v : ${sub.versions}" class="btn btn-sm"
+                   th:classappend="${v.current} ? 'btn-primary' : 'btn-outline-secondary'"
+                   th:href="@{/submissions/{id}(id=${v.id})}" th:text="'v' + ${v.versionNo}">v1</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 점수·총평 -->
+    <div class="card shadow-sm mb-3" th:if="${sub.grade != null or canComment}">
+        <div class="card-body py-2">
+            <div th:if="${sub.grade != null and !canComment}">
+                <strong th:text="${sub.grade.score} + '점'">90점</strong>
+                <span class="text-muted small" th:text="'· ' + ${sub.grade.professorName} + ' · ' + ${#temporals.format(sub.grade.createdAt, 'MM-dd HH:mm')}"></span>
+                <div style="white-space: pre-wrap" th:if="${sub.grade.summary != null}" th:text="${sub.grade.summary}">총평</div>
+            </div>
+            <form th:if="${canComment}" method="post" th:action="@{/submissions/{id}/grade(id=${sub.id})}" class="row g-2 align-items-end">
+                <input type="hidden" name="back" th:value="${back}">
+                <div class="col-auto">
+                    <label class="form-label small mb-0" for="score">점수 (0~100)</label>
+                    <input class="form-control form-control-sm" style="width: 6rem" id="score" name="score" required
+                           inputmode="numeric" th:value="${sub.grade != null} ? ${sub.grade.score} : ''">
+                </div>
+                <div class="col">
+                    <label class="form-label small mb-0" for="summary">총평</label>
+                    <input class="form-control form-control-sm" id="summary" name="summary" maxlength="2000"
+                           th:value="${sub.grade != null} ? ${sub.grade.summary} : ''" placeholder="이 버전에 대한 전체 평가">
+                </div>
+                <div class="col-auto"><button class="btn btn-sm btn-primary" type="submit">점수 저장</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-header py-2"><strong class="small">파일</strong></div>
+                <div class="card-body p-2 file-tree">
+                    <th:block th:each="n : ${sub.tree}">
+                        <div class="dir" th:if="${n.dir}" th:style="'padding-left:' + (${n.depth} * 14 + 6) + 'px'">📁 <span th:text="${n.name}">dir</span></div>
+                        <a th:unless="${n.dir}" th:href="@{/submissions/{id}(id=${sub.id},file=${n.id})}"
+                           th:classappend="${n.id == sub.selectedFileId} ? 'active'"
+                           th:style="'padding-left:' + (${n.depth} * 14 + 6) + 'px'">
+                            <span th:text="${n.binary} ? '📦' : '📄'">📄</span> <span th:text="${n.name}">파일</span>
+                        </a>
+                    </th:block>
+                    <div class="text-muted small p-2" th:if="${#lists.isEmpty(sub.tree)}">파일이 없습니다.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card shadow-sm" th:if="${sub.selectedFileId != null}">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <code th:text="${sub.selectedPath}">path</code>
+                    <span class="small text-muted">
+                        <span th:if="${canComment and !sub.selectedBinary}">줄 번호를 클릭하면 코멘트를 남길 수 있습니다 (Shift+클릭: 범위) ·</span>
+                        <span th:text="${sub.selectedCharset}" th:if="${sub.selectedCharset != null}">UTF-8</span>
+                        <a class="ms-2" th:href="@{/files/{id}/download(id=${sub.selectedFileId})}">내려받기</a>
+                    </span>
+                </div>
+                <div class="card-body text-muted" th:if="${sub.selectedBinary}">바이너리 파일이라 화면에 표시하지 않습니다. 내려받아 확인하세요.</div>
+                <div th:unless="${sub.selectedBinary}" class="table-responsive">
+                    <table class="code-table" id="codeTable" data-cols="2">
+                        <tbody>
+                        <th:block th:each="line, st : ${sub.selectedLines}">
+                            <tr th:id="'L' + ${st.count}" th:attr="data-newline=${st.count}" th:classappend="${canComment} ? 'selectable'">
+                                <td class="ln" th:attr="data-pick=${st.count}" th:text="${st.count}">1</td>
+                                <td class="src" data-group="main" th:text="${line}">code</td>
+                            </tr>
+                            <th:block th:each="t : ${sub.threadsByEndLine.get(st.count)}">
+                                <tr th:replace="~{submissions/fragments :: threadRow(${t}, ${back}, 2, ${sub.tracking.get(t.id)})}"></tr>
+                            </th:block>
+                        </th:block>
+                        <tr th:if="${#lists.isEmpty(sub.selectedLines)}"><td class="ln"></td><td class="src text-muted">(빈 파일)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="alert alert-secondary" th:if="${sub.selectedFileId == null}">제출된 파일이 없습니다.</div>
+        </div>
+    </div>
+
+    <th:block th:if="${canComment and sub.selectedFileId != null and !sub.selectedBinary}">
+        <th:block th:replace="~{submissions/fragments :: commentFormTemplate(${sub.selectedFileId}, ${back})}"></th:block>
+    </th:block>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var lang = SubmitHub.langOf(/*[[${sub.selectedPath}]]*/ '');
+            document.querySelectorAll('#codeTable td.src').forEach(function (td) { td.dataset.lang = lang || ''; });
+            SubmitHub.highlightAll();
+            SubmitHub.initCommenting({table: 'codeTable', tpl: 'commentFormTpl'});
+            if (location.hash) { var el = document.querySelector(location.hash); if (el) el.scrollIntoView({block: 'center'}); }
+        });
+    </script>
+</main>
+</body>
+</html>

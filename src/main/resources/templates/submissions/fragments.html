@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<!-- 버전 타임라인 표 + 두 버전 비교 폼. history 는 SubmissionService.HistoryView -->
+<div th:fragment="timeline(history)">
+    <form class="d-flex flex-wrap align-items-center gap-2 p-3 border-bottom bg-light" method="get"
+          th:if="${#lists.size(history.versions) >= 2}"
+          th:action="@{/assignments/{a}/students/{s}/diff(a=${history.assignmentId},s=${history.studentId})}">
+        <strong class="small">버전 비교</strong>
+        <select class="form-select form-select-sm w-auto" name="from" aria-label="이전 버전">
+            <option th:each="v, st : ${history.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
+                    th:selected="${st.index == 1}"></option>
+        </select>
+        <span>→</span>
+        <select class="form-select form-select-sm w-auto" name="to" aria-label="새 버전">
+            <option th:each="v, st : ${history.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
+                    th:selected="${st.index == 0}"></option>
+        </select>
+        <button class="btn btn-sm btn-outline-primary" type="submit">비교</button>
+    </form>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>버전</th><th>제출 시각</th><th>메모</th><th>파일</th><th>직전 버전 대비</th><th>점수</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="v : ${history.versions}">
+                <td>
+                    <a class="fw-bold" th:href="@{/submissions/{id}(id=${v.id})}" th:text="'v' + ${v.versionNo}">v1</a>
+                    <span class="badge text-bg-warning" th:if="${v.late}">지각</span>
+                </td>
+                <td th:text="${#temporals.format(v.submittedAt, 'yyyy-MM-dd HH:mm')}">시각</td>
+                <td th:text="${v.message}">메모</td>
+                <td th:text="${v.fileCount} + '개 · ' + ${#numbers.formatDecimal(v.totalSize / 1024.0, 1, 1)} + 'KB'">파일</td>
+                <td>
+                    <span class="text-success" th:if="${v.added > 0}" th:text="'+' + ${v.added}"></span>
+                    <span class="text-primary" th:if="${v.modified > 0}" th:text="'~' + ${v.modified}"></span>
+                    <span class="text-danger" th:if="${v.removed > 0}" th:text="'-' + ${v.removed}"></span>
+                    <span class="text-muted" th:if="${v.added == 0 and v.modified == 0 and v.removed == 0}">변경 없음</span>
+                </td>
+                <td><strong th:if="${v.score != null}" th:text="${v.score} + '점'"></strong></td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-secondary" th:href="@{/submissions/{id}(id=${v.id})}">코드 보기</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 코드 표 안에 들어가는 코멘트 스레드 한 줄. colspan = 표의 칸 수 -->
+<tr th:fragment="threadRow(t, back, colspan, track)" class="thread-row" th:id="'c' + ${t.id}">
+    <td th:colspan="${colspan}" class="p-2" style="background:#f6f8fa">
+        <div class="border rounded bg-white p-2 ms-5 me-2">
+            <div class="d-flex justify-content-between small text-muted">
+                <span>
+                    <span th:text="${t.startLine == t.endLine} ? ('줄 ' + ${t.startLine}) : ('줄 ' + ${t.startLine} + '~' + ${t.endLine})">줄 1</span>
+                    · <strong th:text="${t.root.authorName}">교수</strong>
+                    <span class="badge text-bg-secondary" th:if="${t.root.professor}">교수</span>
+                    · <span th:text="${#temporals.format(t.root.createdAt, 'MM-dd HH:mm')}">시각</span>
+                </span>
+                <span class="badge text-bg-success" th:if="${t.resolved}">학생이 수정함으로 표시</span>
+            </div>
+            <div style="white-space: pre-wrap" class="my-1" th:text="${t.root.body}">코멘트</div>
+            <!-- 이 버전 이후의 반영 상태 (LineTracker) -->
+            <div class="small mb-1" th:if="${track != null}">
+                <span class="badge text-bg-danger" th:if="${track.status == 'UNCHANGED'}">🔴 미반영</span>
+                <span th:if="${track.status == 'UNCHANGED' and track.latestFileId != null}">
+                    최신 v<span th:text="${track.latestVersion}"></span>:
+                    <a th:href="@{/submissions/{id}(id=${track.latestSubmissionId},file=${track.latestFileId})} + '#L' + ${track.latestStart}"
+                       th:text="${track.latestStart} + '줄'">12줄</a>에 그대로 있음
+                </span>
+                <span class="badge text-bg-success" th:if="${track.status == 'MODIFIED'}">🟢 반영됨</span>
+                <span th:if="${track.status == 'MODIFIED'}" th:text="'v' + ${track.changedAtVersion} + '에서 수정됨 (교수 확인 필요)'"></span>
+                <span class="badge text-bg-secondary" th:if="${track.status == 'DELETED'}">⚪ 삭제됨</span>
+                <span th:if="${track.status == 'DELETED'}" th:text="'v' + ${track.changedAtVersion} + '에서 삭제됨'"></span>
+            </div>
+            <div th:each="r : ${t.replies}" th:id="'c' + ${r.id}" class="border-top mt-2 pt-2 ps-3">
+                <div class="small text-muted">
+                    <strong th:text="${r.authorName}">이름</strong>
+                    <span class="badge text-bg-secondary" th:if="${r.professor}">교수</span>
+                    · <span th:text="${#temporals.format(r.createdAt, 'MM-dd HH:mm')}">시각</span>
+                </div>
+                <div style="white-space: pre-wrap" th:text="${r.body}">답글</div>
+            </div>
+            <form class="mt-2 d-flex gap-2" method="post" th:action="@{/comments/{id}/replies(id=${t.id})}">
+                <input type="hidden" name="back" th:value="${back}">
+                <input class="form-control form-control-sm" name="body" maxlength="2000" placeholder="답글 달기" required>
+                <button class="btn btn-sm btn-outline-primary text-nowrap" type="submit">답글</button>
+            </form>
+            <form class="mt-1" method="post" sec:authorize="hasRole('STUDENT')" th:action="@{/comments/{id}/resolve(id=${t.id})}">
+                <input type="hidden" name="back" th:value="${back}">
+                <button class="btn btn-sm btn-link p-0" type="submit" th:text="${t.resolved} ? '수정함 표시 취소' : '수정했어요'">수정했어요</button>
+            </form>
+        </div>
+    </td>
+</tr>
+
+<!-- 피드백 반영 현황 카드. feedback = FeedbackService.FeedbackView, student = 학생 화면이면 true -->
+<div class="card shadow-sm mb-4" th:fragment="feedbackCard(feedback, student)" id="feedback">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong th:text="${student} ? ('남은 피드백 ' + ${feedback.summary.remaining} + '개') : '피드백 반영 현황'">피드백</strong>
+        <span class="small text-muted" th:if="${feedback.summary.total > 0}">
+            전체 <span th:text="${feedback.summary.total}"></span>개 ·
+            미반영 <span th:text="${feedback.summary.unchanged}"></span> ·
+            반영됨 <span th:text="${feedback.summary.modified}"></span> ·
+            삭제됨 <span th:text="${feedback.summary.deleted}"></span>
+            <span th:if="${feedback.summary.pending > 0}" th:text="'· 새 코멘트 ' + ${feedback.summary.pending}"></span>
+            <strong class="ms-2" th:if="${feedback.summary.hasRate}" th:text="'반영률 ' + ${feedback.summary.ratePercent} + '%'"></strong>
+        </span>
+    </div>
+    <div class="card-body" th:if="${#lists.isEmpty(feedback.items)}">
+        <span class="text-muted" th:text="${student} ? '아직 받은 피드백이 없습니다.' : '남긴 코멘트가 없습니다.'">없음</span>
+    </div>
+    <ul class="list-group list-group-flush" th:unless="${#lists.isEmpty(feedback.items)}">
+        <li class="list-group-item" th:each="c : ${feedback.items}">
+            <div class="d-flex flex-wrap justify-content-between gap-2">
+                <div>
+                    <span class="badge text-bg-danger" th:if="${c.status == 'UNCHANGED'}">🔴 미반영</span>
+                    <span class="badge text-bg-success" th:if="${c.status == 'MODIFIED'}">🟢 반영됨</span>
+                    <span class="badge text-bg-secondary" th:if="${c.status == 'DELETED'}">⚪ 삭제됨</span>
+                    <span class="badge text-bg-primary" th:if="${c.status == 'PENDING'}">🔵 새 코멘트</span>
+                    <code th:text="${c.path} + ':' + (${c.startLine == c.endLine} ? ${c.startLine} : (${c.startLine} + '-' + ${c.endLine}))">A.java:3</code>
+                    <span class="text-muted small" th:text="'(v' + ${c.commentVersion} + '에서 코멘트)'"></span>
+                    <span class="badge text-bg-light text-muted" th:if="${c.markedResolved}">학생이 수정함 표시</span>
+                </div>
+                <div class="small">
+                    <a th:href="@{/submissions/{id}(id=${c.commentSubmissionId},file=${c.commentFileId})} + '#c' + ${c.commentId}">코멘트 보기</a>
+                    <span th:if="${c.status == 'UNCHANGED' and c.latestFileId != null}">
+                        · <a th:href="@{/submissions/{id}(id=${c.latestSubmissionId},file=${c.latestFileId})} + '#L' + ${c.latestStart}"
+                             th:text="'최신 v' + ${c.latestVersion} + ' ' + ${c.latestStart} + '줄'">최신 v3 12줄</a>
+                    </span>
+                    <span class="text-muted" th:if="${c.status == 'MODIFIED'}" th:text="'· v' + ${c.changedAtVersion} + '에서 수정' + (${student} ? '' : ' — 확인 필요')"></span>
+                    <span class="text-muted" th:if="${c.status == 'DELETED'}" th:text="'· v' + ${c.changedAtVersion} + '에서 삭제'"></span>
+                </div>
+            </div>
+            <div class="small mt-1" style="white-space: pre-wrap" th:text="${#strings.abbreviate(c.body, 120)}">내용</div>
+        </li>
+    </ul>
+</div>
+
+<!-- 줄 선택 시 JS 가 복제해서 쓰는 코멘트 작성 폼 (교수만) -->
+<template th:fragment="commentFormTemplate(fileId, back)" id="commentFormTpl">
+    <form method="post" th:action="@{/files/{id}/comments(id=${fileId})}" class="border rounded bg-white p-2 ms-5 me-2">
+        <input type="hidden" name="startLine">
+        <input type="hidden" name="endLine">
+        <input type="hidden" name="back" th:value="${back}">
+        <div class="small fw-bold mb-1"><span class="range">줄</span> 에 코멘트</div>
+        <textarea class="form-control form-control-sm" name="body" rows="3" maxlength="2000" required
+                  placeholder="이 줄(들)에 대한 피드백을 입력하세요"></textarea>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-primary" type="submit">코멘트 남기기</button>
+            <button class="btn btn-sm btn-link cancel" type="button">취소</button>
+        </div>
+    </form>
+</template>
+</body>
+</html>

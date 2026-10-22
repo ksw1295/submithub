@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="${history.studentName} + ' 제출 이력'">제출 이력</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${history.courseId})}">강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${history.assignmentId})}" th:text="${history.assignmentTitle}">과제</a></li>
+        <li class="breadcrumb-item active" th:text="${history.studentName}">학생</li></ol></nav>
+    <h1 class="h3 mb-3"><span th:text="${history.studentName}">학생</span> 제출 이력</h1>
+    <th:block th:replace="~{submissions/fragments :: feedbackCard(${feedback}, ${!canComment})}"></th:block>
+    <div class="card shadow-sm">
+        <div class="card-body" th:if="${#lists.isEmpty(history.versions)}"><span class="text-muted">제출 내역이 없습니다.</span></div>
+        <th:block th:unless="${#lists.isEmpty(history.versions)}">
+            <th:block th:replace="~{submissions/fragments :: timeline(${history})}"></th:block>
+        </th:block>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="${diff.studentName} + ' v' + ${diff.fromVersion} + '→v' + ${diff.toVersion}">버전 비교</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${diff.courseId})}">강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${diff.assignmentId})}" th:text="${diff.assignmentTitle}">과제</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{a}/students/{s}(a=${diff.assignmentId},s=${diff.studentId})}" th:text="${diff.studentName}">학생</a></li>
+        <li class="breadcrumb-item active" th:text="'v' + ${diff.fromVersion} + ' → v' + ${diff.toVersion}">비교</li></ol></nav>
+
+    <h1 class="h4 mb-3">버전 비교 <small class="text-muted" th:text="${diff.studentName}"></small></h1>
+
+    <!-- 옵션 폼: 바꾸면 바로 다시 불러온다 -->
+    <form method="get" id="diffForm" class="card shadow-sm mb-3"
+          th:action="@{/assignments/{a}/students/{s}/diff(a=${diff.assignmentId},s=${diff.studentId})}">
+        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm w-auto" name="from" aria-label="이전 버전">
+                    <option th:each="v : ${diff.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
+                            th:selected="${v.id == diff.fromId}"></option>
+                </select>
+                <span>→</span>
+                <select class="form-select form-select-sm w-auto" name="to" aria-label="새 버전">
+                    <option th:each="v : ${diff.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
+                            th:selected="${v.id == diff.toId}"></option>
+                </select>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="mode" id="modeSplit" value="split" th:checked="${diff.mode == 'split'}">
+                <label class="btn btn-outline-secondary" for="modeSplit">좌우 분할</label>
+                <input type="radio" class="btn-check" name="mode" id="modeUnified" value="unified" th:checked="${diff.mode == 'unified'}">
+                <label class="btn btn-outline-secondary" for="modeUnified">통합</label>
+            </div>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="ws" name="ws" value="1" th:checked="${diff.ignoreWhitespace}">
+                <label class="form-check-label small" for="ws">공백 무시</label>
+            </div>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="foldSw" th:checked="${diff.fold}"
+                       onchange="document.getElementById('foldHidden').value = this.checked ? '1' : '0'">
+                <input type="hidden" id="foldHidden" name="fold" th:value="${diff.fold} ? '1' : '0'">
+                <label class="form-check-label small" for="foldSw">변경 없는 긴 구간 접기</label>
+            </div>
+            <input type="hidden" name="file" th:value="${diff.selectedPath}">
+            <button class="btn btn-sm btn-primary" type="submit">적용</button>
+        </div>
+    </form>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-header py-2"><strong class="small">변경된 파일</strong></div>
+                <div class="card-body p-2 file-tree">
+                    <a th:each="c : ${diff.changes}" th:classappend="${c.path == diff.selectedPath} ? 'active'"
+                       th:href="@{/assignments/{a}/students/{s}/diff(a=${diff.assignmentId},s=${diff.studentId},from=${diff.fromId},to=${diff.toId},file=${c.path},mode=${diff.mode},ws=${diff.ignoreWhitespace} ? '1' : '0',fold=${diff.fold} ? '1' : '0')}">
+                        <span class="d-block text-truncate" th:text="${c.path}" th:title="${c.path}">path</span>
+                        <small>
+                            <span class="badge text-bg-success" th:if="${c.status == 'ADDED'}">추가</span>
+                            <span class="badge text-bg-danger" th:if="${c.status == 'REMOVED'}">삭제</span>
+                            <span class="badge text-bg-primary" th:if="${c.status == 'MODIFIED'}">수정</span>
+                            <span class="badge text-bg-light text-muted" th:if="${c.status == 'UNCHANGED'}">변경 없음</span>
+                            <span class="text-success" th:if="${c.added > 0}" th:text="'+' + ${c.added}"></span>
+                            <span class="text-danger" th:if="${c.removed > 0}" th:text="'-' + ${c.removed}"></span>
+                            <span th:if="${c.binary}" class="text-muted">바이너리</span>
+                        </small>
+                    </a>
+                    <div class="text-muted small p-2" th:if="${#lists.isEmpty(diff.changes)}">파일이 없습니다.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card shadow-sm" th:if="${diff.selectedPath != null}">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <code th:text="${diff.selectedPath}">path</code>
+                    <span class="small text-muted">
+                        <span th:text="${diff.summary}">+1 -1</span>
+                        <span th:if="${canComment and diff.toFileId != null and !diff.selectedBinary}"> · 오른쪽(새 버전) 줄 번호를 클릭해 코멘트</span>
+                    </span>
+                </div>
+                <div class="card-body text-muted" th:if="${diff.selectedBinary}">바이너리 파일이라 내용을 비교하지 않습니다.</div>
+
+                <!-- 좌우 분할 -->
+                <div class="table-responsive" th:if="${!diff.selectedBinary and diff.mode == 'split'}">
+                    <table class="code-table diff-table" id="diffTable" data-cols="4">
+                        <colgroup><col style="width:3.5rem"><col style="width:calc(50% - 3.5rem)"><col style="width:3.5rem"><col style="width:calc(50% - 3.5rem)"></colgroup>
+                        <tbody>
+                        <th:block th:each="r, st : ${diff.splitRows}">
+                            <tr th:if="${r.type.name() == 'SKIPPED'}" class="diff-skip">
+                                <td colspan="4" class="text-center text-muted small py-1" th:text="'… ' + ${r.skipped} + '줄 변경 없음 …'"></td>
+                            </tr>
+                            <tr th:unless="${r.type.name() == 'SKIPPED'}"
+                                th:classappend="${canComment and r.rightLineNo > 0 and diff.toFileId != null} ? 'selectable'"
+                                th:attr="data-newline=${r.rightLineNo > 0} ? ${r.rightLineNo} : null">
+                                <td class="ln" th:classappend="${r.leftText == null} ? 'diff-empty' : (${r.type.name() == 'EQUAL'} ? '' : 'diff-del-ln')" th:text="${r.leftLineNo > 0} ? ${r.leftLineNo} : ''"></td>
+                                <td class="src" th:classappend="${r.leftText == null} ? 'diff-empty' : (${r.type.name() == 'EQUAL'} ? '' : 'diff-del')"
+                                    th:attr="data-group='L' + ${st.index}" th:text="${r.leftText}"></td>
+                                <td class="ln" th:classappend="${r.rightText == null} ? 'diff-empty' : (${r.type.name() == 'EQUAL'} ? '' : 'diff-add-ln')"
+                                    th:attr="data-pick=${canComment and r.rightLineNo > 0 and diff.toFileId != null} ? ${r.rightLineNo} : null"
+                                    th:text="${r.rightLineNo > 0} ? ${r.rightLineNo} : ''"></td>
+                                <td class="src" th:classappend="${r.rightText == null} ? 'diff-empty' : (${r.type.name() == 'EQUAL'} ? '' : 'diff-add')"
+                                    th:attr="data-group='R' + ${st.index}" th:text="${r.rightText}"></td>
+                            </tr>
+                            <th:block th:if="${r.rightLineNo > 0}" th:each="t : ${diff.threadsByNewLine.get(r.rightLineNo)}">
+                                <tr th:replace="~{submissions/fragments :: threadRow(${t}, ${back}, 4, null)}"></tr>
+                            </th:block>
+                        </th:block>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 통합 -->
+                <div class="table-responsive" th:if="${!diff.selectedBinary and diff.mode == 'unified'}">
+                    <table class="code-table diff-table" id="diffTable" data-cols="4">
+                        <colgroup><col style="width:3.5rem"><col style="width:3.5rem"><col style="width:2rem"><col></colgroup>
+                        <tbody>
+                        <th:block th:each="r, st : ${diff.unifiedRows}">
+                            <tr th:if="${r.kind == '~'}" class="diff-skip">
+                                <td colspan="4" class="text-center text-muted small py-1" th:text="'… ' + ${r.skipped} + '줄 변경 없음 …'"></td>
+                            </tr>
+                            <tr th:unless="${r.kind == '~'}"
+                                th:classappend="${canComment and r.newNo > 0 and diff.toFileId != null} ? 'selectable'"
+                                th:attr="data-newline=${r.newNo > 0} ? ${r.newNo} : null">
+                                <td class="ln" th:classappend="${r.kind == '-'} ? 'diff-del-ln'" th:text="${r.oldNo > 0} ? ${r.oldNo} : ''"></td>
+                                <td class="ln" th:classappend="${r.kind == '+'} ? 'diff-add-ln'"
+                                    th:attr="data-pick=${canComment and r.newNo > 0 and diff.toFileId != null} ? ${r.newNo} : null"
+                                    th:text="${r.newNo > 0} ? ${r.newNo} : ''"></td>
+                                <td class="ln text-center" th:text="${r.kind == ' '} ? '' : ${r.kind}"></td>
+                                <td class="src" th:classappend="${r.kind == '+'} ? 'diff-add' : (${r.kind == '-'} ? 'diff-del')"
+                                    th:attr="data-group='U' + ${st.index}" th:text="${r.text}"></td>
+                            </tr>
+                            <th:block th:if="${r.newNo > 0}" th:each="t : ${diff.threadsByNewLine.get(r.newNo)}">
+                                <tr th:replace="~{submissions/fragments :: threadRow(${t}, ${back}, 4, null)}"></tr>
+                            </th:block>
+                        </th:block>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="alert alert-secondary" th:if="${diff.selectedPath == null}">비교할 파일이 없습니다.</div>
+        </div>
+    </div>
+
+    <th:block th:if="${canComment and diff.toFileId != null and !diff.selectedBinary}">
+        <th:block th:replace="~{submissions/fragments :: commentFormTemplate(${diff.toFileId}, ${back})}"></th:block>
+    </th:block>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var lang = SubmitHub.langOf(/*[[${diff.selectedPath}]]*/ '');
+            document.querySelectorAll('#diffTable td.src').forEach(function (td) { td.dataset.lang = lang || ''; });
+            SubmitHub.highlightAll();
+            SubmitHub.initCommenting({table: 'diffTable', tpl: 'commentFormTpl'});
+            document.querySelectorAll('#diffForm select, #diffForm input[type=radio], #ws').forEach(function (el) {
+                el.addEventListener('change', function () { document.getElementById('diffForm').submit(); });
+            });
+            if (location.hash) { var el = document.querySelector(location.hash); if (el) el.scrollIntoView({block: 'center'}); }
+        });
+    </script>
+</main>
+</body>
+</html>

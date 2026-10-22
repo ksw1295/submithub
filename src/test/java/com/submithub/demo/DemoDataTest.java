@@ -158,8 +158,25 @@ class DemoDataTest {
         assertThat(history.versions()).hasSize(3);
         assertThat(history.versions().get(0).score()).isEqualTo(88);   // v3
         assertThat(history.versions().get(2).score()).isEqualTo(70);   // v1
-        // 과제 1 에서 이민준 v2 는 직전 버전 대비 LinkedList.java 가 수정됨
-        assertThat(history.versions().get(1).modified()).isEqualTo(1);
+        // 과제 1 에서 이민준 v2 는 직전 버전 대비 LinkedList.java 와 Main.java(first 명령 추가)가 수정됨
+        assertThat(history.versions().get(1).modified()).isEqualTo(2);
+    }
+
+    @Autowired com.submithub.service.GradingService gradingService;
+
+    @Test
+    void 과제_1에는_자동_채점_설정과_테스트_케이스가_있고_가짜_판정은_없다() {
+        var cfg = gradingService.config(a1Id(), prof());
+        assertThat(cfg.configured()).isTrue();
+        assertThat(cfg.cases()).hasSize(DemoGrading.CASES.size());
+        assertThat(cfg.totalPoints()).isEqualTo(100);
+        assertThat(cfg.cases().stream().filter(c -> c.publicCase()).count()).isEqualTo(2);
+        // 시연 데이터가 채점 결과를 직접 넣지는 않는다: Docker 가 없으면 "채점 불가", 있으면 실제 채점 결과다
+        var view = submissionService.history(a1Id(), student(1).getId(), prof());
+        assertThat(view.versions()).hasSize(3);
+        if (!gradingService.available()) {
+            assertThat(gradingService.forSubmission(view.versions().get(0).id(), prof()).status()).isEqualTo("UNAVAILABLE");
+        }
     }
 
     private Long a1Id() {

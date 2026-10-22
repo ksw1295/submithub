@@ -5,6 +5,7 @@ import com.submithub.service.AiJudgeService;
 import com.submithub.service.BusinessException;
 import com.submithub.service.DiffService;
 import com.submithub.service.FeedbackService;
+import com.submithub.service.GradingService;
 import com.submithub.service.SubmissionService;
 import com.submithub.storage.UploadProcessor.Upload;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,13 +36,16 @@ public class SubmissionController {
     private final DiffService diffService;
     private final FeedbackService feedbackService;
     private final AiJudgeService aiJudge;
+    private final GradingService gradingService;
 
     public SubmissionController(SubmissionService submissionService, DiffService diffService,
-                                FeedbackService feedbackService, AiJudgeService aiJudge) {
+                                FeedbackService feedbackService, AiJudgeService aiJudge,
+                                GradingService gradingService) {
         this.submissionService = submissionService;
         this.diffService = diffService;
         this.feedbackService = feedbackService;
         this.aiJudge = aiJudge;
+        this.gradingService = gradingService;
     }
 
     @PostMapping("/assignments/{id}/submit")
@@ -73,6 +77,7 @@ public class SubmissionController {
         model.addAttribute("feedback", feedbackService.forStudent(aid, sid, user));
         model.addAttribute("canComment", user.isProfessor());
         model.addAttribute("aiEnabled", user.isProfessor() && aiJudge.enabledForAssignment(aid));
+        model.addAttribute("trend", gradingService.trend(aid, sid, user));
         model.addAttribute("back", currentUrl(request));
         return "submissions/history";
     }
@@ -81,6 +86,7 @@ public class SubmissionController {
     public String view(@PathVariable Long id, @RequestParam(value = "file", required = false) Long fileId,
                        @AuthenticationPrincipal AppUser user, Model model, HttpServletRequest request) {
         model.addAttribute("sub", submissionService.view(id, fileId, user));
+        model.addAttribute("grading", gradingService.forSubmission(id, user));
         model.addAttribute("canComment", user.isProfessor());
         model.addAttribute("back", currentUrl(request));
         return "submissions/view";

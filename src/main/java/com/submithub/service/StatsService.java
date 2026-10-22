@@ -23,7 +23,8 @@ import java.util.Map;
 public class StatsService {
 
     public record StudentRow(Long studentId, String name, String studentNo, int versions, boolean submitted,
-                             boolean late, Integer score, FeedbackService.FeedbackSummary feedback) {
+                             boolean late, Integer score, FeedbackService.FeedbackSummary feedback,
+                             String passTrend, int latestPassPercent) {
         // 반영률 계산과 표기는 FeedbackSummary 한 곳에서 한다 (과제 제출 현황 화면과 같은 값)
         public int feedbackRate() {
             return feedback.ratePercent();
@@ -45,7 +46,8 @@ public class StatsService {
     public record AssignmentStat(Long id, String title, LocalDateTime dueAt, boolean pastDue, int enrolled,
                                  int submitted, int submitRatePercent, int lateStudents, List<String> missing,
                                  int totalSubmissions, int lastDaySubmissions, int lastDayPercent,
-                                 List<Integer> byHour, List<StudentRow> students) {
+                                 List<Integer> byHour, List<StudentRow> students,
+                                 boolean graded, List<Integer> avgPassByVersion, int avgLatestPassPercent) {
     }
 
     /**
@@ -73,6 +75,11 @@ public class StatsService {
             return assignments.stream().map(AssignmentStat::lateStudents).toList();
         }
 
+        /** 과제별 "버전별 평균 통과율" (자동 채점 과제가 아니면 빈 리스트) */
+        public List<List<Integer>> passSeries() {
+            return assignments.stream().map(AssignmentStat::avgPassByVersion).toList();
+        }
+
         /** 과제별 시간대 분포 (차트에 그대로 넘기려고 단순한 리스트로 제공) */
         public List<List<Integer>> hoursByAssignment() {
             return assignments.stream().map(AssignmentStat::byHour).toList();
@@ -85,16 +92,18 @@ public class StatsService {
     private final FeedbackService feedback;
     private final GradeService grades;
     private final AccessService access;
+    private final GradingService gradingService;
 
     public StatsService(AssignmentRepository assignments, SubmissionRepository submissions,
                         EnrollmentRepository enrollments, FeedbackService feedback, GradeService grades,
-                        AccessService access) {
+                        AccessService access, GradingService gradingService) {
         this.assignments = assignments;
         this.submissions = submissions;
         this.enrollments = enrollments;
         this.feedback = feedback;
         this.grades = grades;
         this.access = access;
+        this.gradingService = gradingService;
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +150,8 @@ public class StatsService {
             }
         }
         Map<Long, FeedbackService.FeedbackSummary> fb = feedback.summaries(a.getId(), professor);
+        Map<Long, List<Integer>> pass = gradingService.passRatesByStudent(a.getId());
+        boolean graded = gradingService.configured(a.getId());
 
         List<StudentRow> rows = new ArrayList<>();
         List<String> missing = new ArrayList<>();
@@ -157,13 +168,53 @@ public class StatsService {
             rows.add(new StudentRow(sid, e.getStudent().getName(), e.getStudent().getStudentNo(),
                     versions.getOrDefault(sid, 0), s != null, s != null && s.isLate(),
                     s == null ? null : grades.score(s.getId()),
-                    summary == null ? FeedbackService.FeedbackSummary.empty() : summary));
+                    summary == null ? FeedbackService.FeedbackSummary.empty() : summary,
+                    trendText(pass.get(sid)), latestPercent(pass.get(sid))));
         }
         int submitted = students.size() - missing.size();
         int rate = students.isEmpty() ? 0 : (int) Math.round(100.0 * submitted / students.size());
         int lastDayPercent = all.isEmpty() ? 0 : (int) Math.round(100.0 * lastDay / all.size());
         return new AssignmentStat(a.getId(), a.getTitle(), a.getDueAt(), a.isPastDue(now), students.size(),
                 submitted, rate, late, missing, all.size(), lastDay, lastDayPercent,
-                java.util.Arrays.stream(byHour).boxed().toList(), rows);
+                java.util.Arrays.stream(byHour).boxed().toList(), rows,
+                graded, averageByVersion(pass), averageLatest(pass));
+    }
+
+    /** 버전별 통과율 표기: "40% → 80% → 100%" (채점되지 않은 버전은 -) */
+    static String trendText(List<Integer> percents) {
+        if (percents == null || percents.isEmpty()) {
+            return "";
+        }
+        return percents.stream().map(p -> p < 0 ? "-" : p + "%").collect(java.util.stream.Collectors.joining(" → "));
+    }
+
+    static int latestPercent(List<Integer> percents) {
+        if (percents == null) {
+            return -1;
+        }
+        for (int i = percents.size() - 1; i >= 0; i--) {
+            if (percents.get(i) >= 0) {
+                return percents.get(i);
+            }
+        }
+        return -1;
+    }
+
+    /** v1, v2, ... 번째 버전의 평균 통과율 (그 번째 버전이 채점된 학생들만 평균) */
+    static List<Integer> averageByVersion(Map<Long, List<Integer>> pass) {
+        int max = pass.values().stream().mapToInt(List::size).max().orElse(0);
+        List<Integer> avg = new ArrayList<>();
+        for (int v = 0; v < max; v++) {
+            final int idx = v;
+            double mean = pass.values().stream().filter(l -> l.size() > idx && l.get(idx) >= 0)
+                    .mapToInt(l -> l.get(idx)).average().orElse(-1);
+            avg.add(mean < 0 ? -1 : (int) Math.round(mean));
+        }
+        return avg;
+    }
+
+    static int averageLatest(Map<Long, List<Integer>> pass) {
+        double mean = pass.values().stream().mapToInt(StatsService::latestPercent).filter(p -> p >= 0).average().orElse(-1);
+        return mean < 0 ? -1 : (int) Math.round(mean);
     }
 }

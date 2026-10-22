@@ -89,6 +89,7 @@ class SecurityMatrixTest {
                 new Rule(a + "/similarity", Set.of("prof")),
                 new Rule("/similarity/pairs/" + pairId, Set.of("prof")),
                 new Rule(a + "/edit", Set.of("prof")),
+                new Rule(a + "/grading", Set.of("prof")),
                 new Rule("/courses/" + course.getId() + "/assignments/new", Set.of("prof")));
     }
 

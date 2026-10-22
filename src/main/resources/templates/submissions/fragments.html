@@ -21,7 +21,7 @@
     </form>
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead><tr><th>버전</th><th>제출 시각</th><th>메모</th><th>파일</th><th>직전 버전 대비</th><th>점수</th><th></th></tr></thead>
+            <thead><tr><th>버전</th><th>제출 시각</th><th>메모</th><th>파일</th><th>직전 버전 대비</th><th th:if="${#lists.size(history.versions) > 0 and history.versions[0].autoLabel != null}">자동 채점</th><th>점수</th><th></th></tr></thead>
             <tbody>
             <tr th:each="v : ${history.versions}">
                 <td>
@@ -36,6 +36,10 @@
                     <span class="text-primary" th:if="${v.modified > 0}" th:text="'~' + ${v.modified}"></span>
                     <span class="text-danger" th:if="${v.removed > 0}" th:text="'-' + ${v.removed}"></span>
                     <span class="text-muted" th:if="${v.added == 0 and v.modified == 0 and v.removed == 0}">변경 없음</span>
+                </td>
+                <td th:if="${history.versions[0].autoLabel != null}">
+                    <span class="badge" th:if="${v.autoLabel != null}" th:text="${v.autoLabel}"
+                          th:classappend="${v.autoPercent >= 100} ? 'text-bg-success' : (${v.autoPercent >= 50} ? 'text-bg-warning' : (${v.autoPercent >= 0} ? 'text-bg-danger' : 'text-bg-secondary'))">3/5</span>
                 </td>
                 <td><strong th:if="${v.score != null}" th:text="${v.score} + '점'"></strong></td>
                 <td class="text-end"><a class="btn btn-sm btn-outline-secondary" th:href="@{/submissions/{id}(id=${v.id})}">코드 보기</a></td>
@@ -92,6 +96,93 @@
         </div>
     </td>
 </tr>
+
+<!-- 자동 채점: 이 버전 테스트 통과율 변화 (피드백 반영 카드 옆에 둔다). trend = GradingService.TrendView 또는 null -->
+<div class="card shadow-sm mb-4" th:fragment="trendBox(trend)" id="gradingTrend" th:if="${trend != null}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>이 버전 테스트 통과율 변화</strong>
+        <span class="small" th:if="${trend.graded >= 2}">
+            <span th:classappend="${trend.delta > 0} ? 'text-success fw-bold' : (${trend.delta < 0} ? 'text-danger fw-bold' : 'text-muted')"
+                  th:text="'첫 채점 대비 ' + (${trend.delta > 0} ? '▲ +' : (${trend.delta < 0} ? '▼ ' : '± ')) + ${trend.delta} + '%p'">▲ +40%p</span>
+        </span>
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-3 align-items-end">
+            <div th:each="p : ${trend.points}" class="text-center" style="min-width: 4.5rem">
+                <div class="small text-muted" th:text="'v' + ${p.versionNo}">v1</div>
+                <div th:if="${p.graded}">
+                    <div class="progress" style="height: 0.6rem" role="progressbar">
+                        <div class="progress-bar" th:classappend="${p.percent >= 100} ? 'bg-success' : (${p.percent >= 50} ? 'bg-warning' : 'bg-danger')"
+                             th:style="'width:' + ${p.percent} + '%'"></div>
+                    </div>
+                    <div class="fw-bold" th:text="${p.percent} + '%'">60%</div>
+                    <div class="small text-muted" th:text="${p.passed} + '/' + ${p.total}">3/5</div>
+                </div>
+                <div th:unless="${p.graded}" class="small text-muted pt-2"
+                     th:text="${p.status == 'DONE'} ? '컴파일 오류' : (${p.status == 'UNAVAILABLE'} ? '채점 불가' : (${p.status == 'ERROR'} ? '채점 오류' : (${p.status == 'NONE'} ? '채점 전' : '채점 중')))">채점 전</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 제출 보기: 케이스별 채점 결과. g = GradingService.GradingView, professor 이면 비공개 케이스 상세와 다시 채점 버튼이 보인다 -->
+<div class="card shadow-sm mb-3" th:fragment="gradingCard(g, professor, submissionId, back)" id="gradingResult" th:if="${g != null}">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>
+            <strong>자동 채점</strong>
+            <span class="badge text-bg-secondary" th:if="${g.status == 'NONE'}">채점 전</span>
+            <span class="badge text-bg-info" th:if="${g.status == 'QUEUED' or g.status == 'RUNNING'}">채점 중…</span>
+            <span class="badge text-bg-secondary" th:if="${g.status == 'UNAVAILABLE'}">채점 불가</span>
+            <span class="badge text-bg-danger" th:if="${g.status == 'ERROR'}">채점 오류</span>
+            <span class="badge text-bg-danger" th:if="${g.status == 'DONE' and !g.compileOk}">컴파일 오류</span>
+            <span class="badge" th:if="${g.status == 'DONE' and g.compileOk}"
+                  th:classappend="${g.percent >= 100} ? 'text-bg-success' : (${g.percent >= 50} ? 'text-bg-warning' : 'text-bg-danger')"
+                  th:text="${g.passed} + ' / ' + ${g.total} + ' 통과 (' + ${g.percent} + '%) · ' + ${g.score} + ' / ' + ${g.totalPoints} + '점'">3/5</span>
+        </span>
+        <form method="post" th:if="${professor and g.runnerAvailable}" th:action="@{/submissions/{id}/regrade(id=${submissionId})}">
+            <input type="hidden" name="back" th:value="${back}">
+            <button class="btn btn-sm btn-outline-primary py-0" type="submit">다시 채점</button>
+        </form>
+    </div>
+    <div class="card-body small" th:if="${g.status == 'NONE'}">아직 채점되지 않았습니다. (이 과제에 채점 설정이 생기기 전에 낸 제출물일 수 있습니다.)</div>
+    <div class="card-body small" th:if="${g.status == 'UNAVAILABLE' or g.status == 'ERROR'}" th:text="${g.message}">메시지</div>
+    <div class="card-body small" th:if="${g.status == 'QUEUED' or g.status == 'RUNNING'}">채점이 진행 중입니다. 잠시 뒤 화면을 새로 고치세요.</div>
+    <div class="card-body" th:if="${g.status == 'DONE' and !g.compileOk}">
+        <div class="small text-muted mb-1">컴파일(또는 문법) 오류 메시지</div>
+        <pre class="border rounded p-2 bg-light small mb-0" style="white-space: pre-wrap" th:text="${g.compileMessage}">오류</pre>
+    </div>
+    <ul class="list-group list-group-flush" th:if="${g.status == 'DONE' and g.compileOk}">
+        <li class="list-group-item" th:each="c, st : ${g.cases}">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <span th:text="${st.count} + '. ' + ${c.name}">케이스</span>
+                    <span class="badge text-bg-info" th:if="${c.publicCase}">공개</span>
+                    <span class="badge text-bg-secondary" th:unless="${c.publicCase}">비공개</span>
+                </div>
+                <div class="small">
+                    <span class="badge text-bg-success" th:if="${c.verdict == 'PASSED'}">통과</span>
+                    <span class="badge text-bg-danger" th:if="${c.verdict == 'FAILED'}">실패</span>
+                    <span class="badge text-bg-warning" th:if="${c.verdict == 'TIMEOUT'}">시간 초과</span>
+                    <span class="badge text-bg-danger" th:if="${c.verdict == 'RUNTIME_ERROR'}">런타임 오류</span>
+                    <span class="text-muted" th:text="${c.awarded} + ' / ' + ${c.points} + '점 · ' + ${c.durationMs} + 'ms'">20/20</span>
+                </div>
+            </div>
+            <details class="mt-1 small" th:if="${c.input != null or c.expected != null or c.actual != null or c.error != null}">
+                <summary class="text-primary" style="cursor:pointer" th:text="${professor and !c.publicCase} ? '상세 (비공개 케이스: 교수에게만 보임)' : '입력 · 기대 출력 · 실제 출력'">상세</summary>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-4"><div class="text-muted">입력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.input} ?: '(없음)'">입력</pre></div>
+                    <div class="col-md-4"><div class="text-muted">기대 출력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.expected}">기대</pre></div>
+                    <div class="col-md-4"><div class="text-muted">실제 출력</div><pre class="border rounded p-2 mb-0" th:classappend="${c.verdict == 'PASSED'} ? 'bg-light' : 'border-danger bg-light'" th:text="${c.actual} ?: '(없음)'">실제</pre></div>
+                </div>
+                <div class="mt-1" th:if="${c.error != null and !c.error.isBlank()}">
+                    <div class="text-muted">표준오류</div>
+                    <pre class="border rounded p-2 mb-0 bg-light text-danger" style="white-space: pre-wrap" th:text="${c.error}">오류</pre>
+                </div>
+            </details>
+        </li>
+    </ul>
+    <div class="card-footer small text-muted" th:if="${!professor and g.status == 'DONE' and g.compileOk}">비공개 케이스는 통과 여부만 보여줍니다.</div>
+</div>
 
 <!-- 학생 한 명의 반영률 표기. 과제 제출 현황과 통계 화면이 같이 쓴다. fb = FeedbackSummary 또는 null -->
 <span th:fragment="rateCell(fb)">

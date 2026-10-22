@@ -38,3 +38,5 @@
 
 `D:\Dev\Workspaces\eclipse_workspace\src\com\capstone` (소스),
 `D:\Dev\Workspaces\capstone\sql\schema.sql` (스키마). 새 프로젝트에 복사하지 말고 설계 참고용으로만 본다.
+
+- 자동 채점: 학생 코드는 `DockerGradingRunner`(docker CLI, 격리 옵션은 `DockerCommands`)로만 실행한다. 호스트에서 직접 실행하는 경로를 만들지 않는다. 테스트는 `FakeGradingRunner` 를 쓰고(`@GradingTest`), 실제 컨테이너 테스트는 Docker 가 있을 때만 돈다. 시연 데이터에는 채점 결과를 넣지 않는다.

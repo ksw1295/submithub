@@ -8,6 +8,10 @@ import com.submithub.domain.Enrollment;
 import com.submithub.domain.EnrollmentRepository;
 import com.submithub.domain.Grade;
 import com.submithub.domain.GradeRepository;
+import com.submithub.domain.GradingConfig;
+import com.submithub.domain.GradingConfigRepository;
+import com.submithub.domain.GradingTestCase;
+import com.submithub.domain.GradingTestCaseRepository;
 import com.submithub.domain.ReviewComment;
 import com.submithub.domain.ReviewCommentRepository;
 import com.submithub.domain.Role;
@@ -17,6 +21,7 @@ import com.submithub.domain.SubmissionRepository;
 import com.submithub.domain.User;
 import com.submithub.domain.UserRepository;
 import com.submithub.security.AppUser;
+import com.submithub.service.GradingService;
 import com.submithub.service.SimilarityService;
 import com.submithub.storage.FileStorage;
 import com.submithub.storage.Hashing;
@@ -66,12 +71,19 @@ public class DemoDataLoader implements ApplicationRunner {
     private final FileStorage storage;
     private final PasswordEncoder encoder;
     private final SimilarityService similarity;
+    private final GradingConfigRepository gradingConfigs;
+    private final GradingTestCaseRepository gradingCases;
+    private final GradingService grading;
     private final TransactionTemplate tx;
+    /** 과제 1 의 제출 ID 들 (시드가 커밋된 뒤 자동 채점을 요청한다) */
+    private final List<Long> gradedSubmissionIds = new ArrayList<>();
 
     public DemoDataLoader(UserRepository users, CourseRepository courses, EnrollmentRepository enrollments,
                           AssignmentRepository assignments, SubmissionRepository submissions,
                           ReviewCommentRepository comments, GradeRepository grades, FileStorage storage,
-                          PasswordEncoder encoder, SimilarityService similarity, PlatformTransactionManager txm) {
+                          PasswordEncoder encoder, SimilarityService similarity,
+                          GradingConfigRepository gradingConfigs, GradingTestCaseRepository gradingCases,
+                          GradingService grading, PlatformTransactionManager txm) {
         this.users = users;
         this.courses = courses;
         this.enrollments = enrollments;
@@ -82,6 +94,9 @@ public class DemoDataLoader implements ApplicationRunner {
         this.storage = storage;
         this.encoder = encoder;
         this.similarity = similarity;
+        this.gradingConfigs = gradingConfigs;
+        this.gradingCases = gradingCases;
+        this.grading = grading;
         this.tx = new TransactionTemplate(txm);
     }
 
@@ -91,6 +106,8 @@ public class DemoDataLoader implements ApplicationRunner {
             return;
         }
         tx.executeWithoutResult(status -> seed());
+        // 시드가 커밋된 뒤 과제 1 의 제출물을 자동 채점한다: Docker 가 있으면 실제로 채점하고, 없으면 "채점 불가"로 기록한다
+        gradedSubmissionIds.forEach(grading::onNewVersion);
         log.info("시연용 샘플 데이터를 넣었습니다. 교수 계정: {} / {}, 학생 계정: student1~student7 / {}, 초대 코드: {}",
                 PROFESSOR_ID, PROFESSOR_PASSWORD, STUDENT_PASSWORD, INVITE_CODE);
     }
@@ -111,9 +128,16 @@ public class DemoDataLoader implements ApplicationRunner {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime due1 = now.minusDays(3).withHour(23).withMinute(59).withSecond(0).withNano(0);
         Assignment a1 = assignments.save(new Assignment(course, "과제 1: 연결 리스트 구현",
-                "단일 연결 리스트를 구현하세요. add, get, remove, size 가 동작해야 합니다.\n"
-                        + "제공한 뼈대 코드(LinkedList.java)를 시작점으로 사용하세요.",
-                due1, true, now.plusDays(30).toLocalDate().atTime(23, 59), DemoCode.BASELINE));
+                DemoGrading.DESCRIPTION,
+                due1, true, now.plusDays(30).toLocalDate().atTime(23, 59),
+                DemoCode.BASELINE + "\n" + DemoCode.BASELINE_DRIVER));
+        // 자동 채점 설정: 표준입력 명령을 처리하는 Main 의 출력을 비교한다
+        gradingConfigs.save(new GradingConfig(a1, DemoGrading.LANGUAGE, DemoGrading.MAIN_FILE,
+                DemoGrading.TIME_LIMIT_SECONDS, DemoGrading.MEMORY_LIMIT_MB));
+        int order = 1;
+        for (DemoGrading.Case c : DemoGrading.CASES) {
+            gradingCases.save(new GradingTestCase(a1, c.name(), c.input(), c.expected(), c.publicCase(), c.points(), order++));
+        }
         LocalDateTime due2 = now.plusDays(3).withHour(23).withMinute(59).withSecond(0).withNano(0);
         Assignment a2 = assignments.save(new Assignment(course, "과제 2: 이진 탐색 트리",
                 "정수를 저장하는 이진 탐색 트리를 구현하세요. insert 와 contains 가 필요합니다.",
@@ -124,25 +148,27 @@ public class DemoDataLoader implements ApplicationRunner {
 
         // ---- 과제 1 ----
         Submission s1v1 = submit(a1, s1, 1, "처음 제출", at(due1, -2, 18, 0),
-                files("LinkedList.java", DemoCode.S1_V1_LIST, "Main.java", DemoCode.S1_MAIN));
+                files("LinkedList.java", DemoCode.S1_V1_LIST, "Main.java", DemoCode.S1_MAIN_V1));
         Submission s1v2 = submit(a1, s1, 2, "리뷰 반영: get 범위, 디버그 출력 삭제, addFirst 추가",
                 at(due1, 0, 19, 0), files("LinkedList.java", DemoCode.S1_V2_LIST, "Main.java", DemoCode.S1_MAIN));
         Submission s1v3 = submit(a1, s1, 3, "변수명 정리", at(due1, 0, 22, 30),
                 files("LinkedList.java", DemoCode.S1_V3_LIST, "Main.java", DemoCode.S1_MAIN));
 
         Submission s2v1 = submit(a1, s2, 1, "연결 리스트 구현 완료", at(due1, -1, 15, 0),
-                files("LinkedList.java", DemoCode.ORIGINAL));
+                files("LinkedList.java", DemoCode.ORIGINAL, "Main.java", DemoCode.MAIN_S2));
         Submission s3v1 = submit(a1, s3, 1, "제출합니다", at(due1, 0, 21, 0),
-                files("LinkedList.java", DemoCode.disguised(DemoCode.ORIGINAL)));
+                files("LinkedList.java", DemoCode.disguised(DemoCode.ORIGINAL), "Main.java", DemoCode.MAIN_S3));
         Submission s4v1 = submit(a1, s4, 1, "늦어서 죄송합니다", at(due1, 1, 7, 0),
-                files("LinkedList.java", DemoCode.GENERIC_STYLE));
+                files("LinkedList.java", DemoCode.GENERIC_STYLE, "Main.java", DemoCode.MAIN_S4));
         Submission s5v1 = submit(a1, s5, 1, "이중 연결 리스트로 구현", at(due1, -2, 21, 30),
-                files("LinkedList.java", DemoCode.DOUBLY_V1));
+                files("LinkedList.java", DemoCode.DOUBLY_V1, "Main.java", DemoCode.MAIN_S5));
         Submission s5v2 = submit(a1, s5, 2, "addFirst 수정", at(due1, 0, 23, 30),
-                files("LinkedList.java", DemoCode.DOUBLY_V2));
+                files("LinkedList.java", DemoCode.DOUBLY_V2, "Main.java", DemoCode.MAIN_S5));
         Submission s7v1 = submit(a1, s7, 1, "센티넬 노드 방식", at(due1, 0, 22, 0),
-                files("LinkedList.java", DemoCode.SENTINEL_STYLE));
+                files("LinkedList.java", DemoCode.SENTINEL_STYLE, "Main.java", DemoCode.MAIN_S7));
         // student6(윤지우)은 과제 1 미제출
+        gradedSubmissionIds.addAll(List.of(s1v1.getId(), s1v2.getId(), s1v3.getId(), s2v1.getId(), s3v1.getId(),
+                s4v1.getId(), s5v1.getId(), s5v2.getId(), s7v1.getId()));
 
         // 이민준 v1 에 대한 교수의 코멘트 4개 → v2, v3 제출 후 반영 상태가 자동 표시된다
         SubmissionFile f1 = fileOf(s1v1, "LinkedList.java");

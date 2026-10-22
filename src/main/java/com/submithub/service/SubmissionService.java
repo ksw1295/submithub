@@ -42,7 +42,8 @@ public class SubmissionService {
 
     /** 버전 타임라인 한 줄. added/modified/removed 는 직전 버전과 비교한 파일 수 */
     public record VersionRow(Long id, int versionNo, String message, boolean late, LocalDateTime submittedAt,
-                             int fileCount, long totalSize, int added, int modified, int removed, Integer score) {
+                             int fileCount, long totalSize, int added, int modified, int removed, Integer score,
+                             String autoLabel, int autoPercent) {
     }
 
     public record HistoryView(Long assignmentId, String assignmentTitle, Long courseId, Long studentId,
@@ -90,12 +91,14 @@ public class SubmissionService {
     private final GradeService grades;
     private final FeedbackService feedback;
     private final AiJudgeService aiJudge;
+    private final GradingService grading;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
                              UploadProcessor processor, FileStorage storage, ReviewService reviews,
-                             GradeService grades, FeedbackService feedback, AiJudgeService aiJudge, PlatformTransactionManager txManager) {
+                             GradeService grades, FeedbackService feedback, AiJudgeService aiJudge,
+                             GradingService grading, PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -107,6 +110,7 @@ public class SubmissionService {
         this.grades = grades;
         this.feedback = feedback;
         this.aiJudge = aiJudge;
+        this.grading = grading;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -132,6 +136,8 @@ public class SubmissionService {
         }
         // 제출이 커밋된 뒤에, 강의에서 AI 판정을 켰다면 비동기로 반영 판정을 시작한다 (실패해도 제출에는 영향 없음)
         aiJudge.onNewVersion(assignmentId, student.getId());
+        // 자동 채점 과제라면 비동기로 채점한다 (실행기를 쓸 수 없거나 실패해도 제출에는 영향 없음)
+        grading.onNewVersion(result.id());
         return result;
     }
 
@@ -199,6 +205,7 @@ public class SubmissionService {
         List<Submission> list = submissions.findByAssignmentIdAndStudentIdOrderByVersionNoAsc(assignmentId, studentId);
         List<VersionRow> rows = new ArrayList<>();
         Map<String, String> previous = Map.of();
+        Map<Long, GradingService.AutoGrade> auto = grading.autoGrades(assignmentId, list.stream().map(Submission::getId).toList());
         for (Submission s : list) {
             Map<String, String> current = new HashMap<>();
             long total = 0;
@@ -218,7 +225,9 @@ public class SubmissionService {
             }
             int removed = (int) previous.keySet().stream().filter(p -> !current.containsKey(p)).count();
             rows.add(new VersionRow(s.getId(), s.getVersionNo(), s.getMessage(), s.isLate(), s.getSubmittedAt(),
-                    s.getFiles().size(), total, added, modified, removed, grades.score(s.getId())));
+                    s.getFiles().size(), total, added, modified, removed, grades.score(s.getId()),
+                    auto.containsKey(s.getId()) ? auto.get(s.getId()).label() : null,
+                    auto.containsKey(s.getId()) ? auto.get(s.getId()).percent() : -1));
             previous = current;
         }
         java.util.Collections.reverse(rows);   // 최신 버전이 위로

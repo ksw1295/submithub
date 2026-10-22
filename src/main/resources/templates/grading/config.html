@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>자동 채점 설정</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${assignment.courseId})}" th:text="${assignment.courseName}">강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${assignment.id})}" th:text="${assignment.title}">과제</a></li>
+        <li class="breadcrumb-item active">자동 채점 설정</li></ol></nav>
+
+    <h1 class="h3 mb-3">자동 채점 설정 <small class="text-muted" th:text="${assignment.title}"></small></h1>
+
+    <div class="alert alert-success small" th:if="${cfg.runnerAvailable}">
+        ✔ 채점 실행기를 쓸 수 있습니다 (<span th:text="${cfg.runnerName}">docker</span>). 제출 코드는 네트워크가 막힌 격리 컨테이너에서만 실행됩니다.
+    </div>
+    <div class="alert alert-warning" th:unless="${cfg.runnerAvailable}">
+        <strong>채점 사용 불가</strong> — 이 서버에서 Docker 를 쓸 수 없습니다. 설정과 테스트 케이스는 등록해 둘 수 있지만, Docker 가 켜지기 전까지는
+        제출물이 채점되지 않고 "채점 불가"로 표시됩니다. (제출·리뷰·diff 등 나머지 기능은 그대로 동작합니다.)
+        Docker 를 켠 뒤 아래 "모든 제출 다시 채점"을 누르세요.
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header"><strong>실행 설정</strong></div>
+                <div class="card-body">
+                    <form method="post" th:action="@{/assignments/{id}/grading/config(id=${assignment.id})}">
+                        <div class="mb-3">
+                            <label class="form-label" for="language">언어</label>
+                            <select class="form-select" id="language" name="language">
+                                <option th:each="l : ${languages}" th:value="${l.name()}" th:text="${l.label}" th:selected="${l == cfg.language}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="mainFile">실행할 파일</label>
+                            <input class="form-control" id="mainFile" name="mainFile" th:value="${cfg.mainFile}" required maxlength="200">
+                            <div class="form-text">Java: 기본 패키지의 main 이 있는 파일(예: Main.java), Python: main.py. zip 안의 경로는 그대로 씁니다.</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="timeLimitSeconds">시간 제한 (초/케이스)</label>
+                                <input class="form-control" id="timeLimitSeconds" name="timeLimitSeconds" type="number" min="1" max="30" th:value="${cfg.timeLimitSeconds}" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="memoryLimitMb">메모리 제한 (MB)</label>
+                                <input class="form-control" id="memoryLimitMb" name="memoryLimitMb" type="number" min="64" max="512" th:value="${cfg.memoryLimitMb}" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit" th:text="${cfg.configured} ? '설정 저장' : '설정 만들기'">저장</button>
+                        <span class="small text-muted ms-2" th:unless="${cfg.configured}">설정과 테스트 케이스가 모두 있어야 자동 채점이 켜집니다.</span>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm" th:if="${cfg.configured}">
+                <div class="card-header"><strong>테스트 케이스 추가</strong></div>
+                <div class="card-body">
+                    <form method="post" th:action="@{/assignments/{id}/grading/cases(id=${assignment.id})}">
+                        <div class="mb-2">
+                            <label class="form-label" for="name">이름</label>
+                            <input class="form-control" id="name" name="name" required maxlength="100" placeholder="예: 기본 동작">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="input">표준입력</label>
+                            <textarea class="form-control code" id="input" name="input" rows="4" maxlength="20000" placeholder="프로그램에 넣을 입력 (없으면 비워 둠)"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="expected">기대 출력</label>
+                            <textarea class="form-control code" id="expected" name="expected" rows="4" maxlength="20000" required></textarea>
+                            <div class="form-text">줄 끝 공백, 줄바꿈 종류(CRLF/LF), 끝의 빈 줄 차이는 무시하고 나머지는 정확히 비교합니다.</div>
+                        </div>
+                        <div class="row align-items-end">
+                            <div class="col-6 mb-2">
+                                <label class="form-label" for="points">배점</label>
+                                <input class="form-control" id="points" name="points" type="number" min="0" max="1000" value="20" required>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="publicCase" name="publicCase" value="true">
+                                    <label class="form-check-label" for="publicCase">공개 케이스</label>
+                                </div>
+                                <div class="form-text">공개: 학생에게 입력·기대 출력·실제 출력을 보여줌. 비공개: 통과/실패만 보여줌.</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-primary" type="submit">케이스 추가</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>테스트 케이스</strong>
+                    <span class="small text-muted" th:text="${#lists.size(cfg.cases)} + '개 · 총 ' + ${cfg.totalPoints} + '점'">0개</span>
+                </div>
+                <div class="card-body" th:if="${#lists.isEmpty(cfg.cases)}">
+                    <span class="text-muted" th:text="${cfg.configured} ? '아직 테스트 케이스가 없습니다. 왼쪽에서 추가하세요.' : '먼저 실행 설정을 저장하세요.'">없음</span>
+                </div>
+                <ul class="list-group list-group-flush" th:unless="${#lists.isEmpty(cfg.cases)}">
+                    <li class="list-group-item" th:each="c, st : ${cfg.cases}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <strong th:text="${st.count} + '. ' + ${c.name}">케이스</strong>
+                                <span class="badge text-bg-info" th:if="${c.publicCase}">공개</span>
+                                <span class="badge text-bg-secondary" th:unless="${c.publicCase}">비공개</span>
+                                <span class="badge text-bg-light text-dark" th:text="${c.points} + '점'"></span>
+                            </div>
+                            <form method="post" th:action="@{/assignments/{a}/grading/cases/{c}/delete(a=${assignment.id},c=${c.id})}">
+                                <button class="btn btn-sm btn-outline-danger py-0" type="submit">삭제</button>
+                            </form>
+                        </div>
+                        <div class="row g-2 mt-1 small">
+                            <div class="col-md-6"><div class="text-muted">입력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.input} ?: '(없음)'">입력</pre></div>
+                            <div class="col-md-6"><div class="text-muted">기대 출력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.expected}">출력</pre></div>
+                        </div>
+                    </li>
+                </ul>
+                <div class="card-footer d-flex justify-content-between align-items-center" th:if="${cfg.configured and !#lists.isEmpty(cfg.cases)}">
+                    <span class="small text-muted">케이스를 고친 뒤에는 다시 채점해야 기존 제출물에 반영됩니다.</span>
+                    <form method="post" th:action="@{/assignments/{id}/grading/regrade(id=${assignment.id})}">
+                        <button class="btn btn-sm btn-primary" type="submit" th:disabled="${!cfg.runnerAvailable}">모든 제출 다시 채점</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -52,10 +52,17 @@ public class RateLimiterService {
         if (isTrustedProxy(remoteAddr)) {
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
+                // 맨 왼쪽 값은 클라이언트가 마음대로 넣을 수 있으므로, 오른쪽(가까운 쪽)부터 신뢰하지 않는 첫 주소를 쓴다
                 String[] ips = forwarded.split(",");
-                String clientIp = ips[0].trim();
-                if (!clientIp.isEmpty()) {
-                    return clientIp;
+                for (int i = ips.length - 1; i >= 0; i--) {
+                    String candidate = ips[i].trim();
+                    if (!candidate.isEmpty() && !isTrustedProxy(candidate)) {
+                        return candidate;
+                    }
+                }
+                String first = ips[0].trim();
+                if (!first.isEmpty()) {
+                    return first;   // 전부 신뢰하는 프록시 주소(내부 접속)면 맨 앞 값
                 }
             }
         }

@@ -113,4 +113,13 @@ class RateLimitTest {
         untrustedReq.addHeader("X-Forwarded-For", "1.1.1.1");
         assertThat(rateLimiterService.resolveClientIp(untrustedReq)).isEqualTo("203.0.113.50");
     }
+
+    @Test
+    void 신뢰_프록시가_뒤에_붙인_주소를_쓰고_맨_앞의_위조_값은_무시한다() {
+        // 클라이언트가 "X-Forwarded-For: 9.9.9.9" 를 직접 보내면 프록시가 실제 접속 IP 를 뒤에 붙인다
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setRemoteAddr("172.18.0.5");
+        req.addHeader("X-Forwarded-For", "9.9.9.9, 203.0.113.7");
+        assertThat(rateLimiterService.resolveClientIp(req)).isEqualTo("203.0.113.7");
+    }
 }

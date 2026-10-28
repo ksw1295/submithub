@@ -1,0 +1,33 @@
+# 운영(prod) 환경 설정: 기존 mariadb 프로필 위에 겹쳐 쓰는 방식
+spring:
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:20MB}
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    whitelabel:
+      enabled: false
+
+submithub:
+  demo-data: ${DEMO_DATA:false}
+  professor-signup-code: ${PROFESSOR_SIGNUP_CODE:}
+
+logging:
+  file:
+    name: logs/submithub.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: logs/submithub-%d{yyyy-MM-dd}.%i.log
+      max-history: 14

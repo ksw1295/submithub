@@ -8,35 +8,40 @@
         <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${assignment.courseId})}" th:text="${assignment.courseName}">강의</a></li>
         <li class="breadcrumb-item active" th:text="${assignment.title}">과제</li></ol></nav>
 
-    <div class="d-flex justify-content-between align-items-start mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <h1 class="h3 mb-0" th:text="${assignment.title}">과제</h1>
-        <div sec:authorize="hasRole('PROFESSOR')" class="d-flex gap-2">
-            <a class="btn btn-outline-primary" th:href="@{/assignments/{id}/grading(id=${assignment.id})}">자동 채점 <span class="badge" th:classappend="${autoGrading} ? 'text-bg-success' : 'text-bg-secondary'" th:text="${autoGrading} ? '사용 중' : '꺼짐'">꺼짐</span></a>
-            <a class="btn btn-outline-danger" th:href="@{/assignments/{id}/similarity(id=${assignment.id})}">표절 검사</a>
-            <a class="btn btn-outline-secondary" th:href="@{/assignments/{id}/edit(id=${assignment.id})}">수정</a>
+        <div sec:authorize="hasRole('PROFESSOR')" class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/grading(id=${assignment.id})}">
+                <span>자동 채점</span>
+                <span class="badge" th:classappend="${autoGrading} ? 'text-bg-success' : 'text-bg-secondary'" th:text="${autoGrading} ? '사용 중' : '꺼짐'">꺼짐</span>
+            </a>
+            <a class="btn btn-outline-danger btn-sm" th:href="@{/assignments/{id}/similarity(id=${assignment.id})}">표절 검사</a>
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/edit(id=${assignment.id})}">수정</a>
         </div>
     </div>
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <p style="white-space: pre-wrap" th:text="${assignment.description}">설명</p>
-            <dl class="row mb-0">
-                <dt class="col-sm-3">마감</dt>
-                <dd class="col-sm-9">
-                    <span th:text="${#temporals.format(assignment.dueAt, 'yyyy-MM-dd HH:mm')}">마감</span>
-                    <span class="badge text-bg-dark" th:if="${assignment.pastDue}">마감 지남</span>
-                </dd>
-                <dt class="col-sm-3">지각 제출</dt>
-                <dd class="col-sm-9">
-                    <span th:if="${!assignment.allowLate}">허용하지 않음</span>
-                    <span th:if="${assignment.allowLate}">허용
-                        <span th:if="${assignment.lateUntil != null}" th:text="'(' + ${#temporals.format(assignment.lateUntil, 'yyyy-MM-dd HH:mm')} + '까지)'"></span></span>
-                </dd>
-                <dt class="col-sm-3" th:if="${autoGrading}">자동 채점</dt>
-                <dd class="col-sm-9" th:if="${autoGrading}">제출할 때마다 자동으로 채점됩니다. 결과는 제출 화면과 제출 이력에서 볼 수 있습니다.</dd>
-                <dt class="col-sm-3" sec:authorize="hasRole('PROFESSOR')">뼈대 코드</dt>
-                <dd class="col-sm-9" sec:authorize="hasRole('PROFESSOR')" th:text="${assignment.hasBaseline} ? '등록됨 (표절 검사에서 제외)' : '없음'">없음</dd>
-            </dl>
+            <p class="mb-3" style="white-space: pre-wrap; line-height: 1.65;" th:text="${assignment.description}">설명</p>
+            <div class="meta-grid">
+                <dl class="row mb-0 gy-1">
+                    <dt class="col-sm-2">마감</dt>
+                    <dd class="col-sm-10 mb-1">
+                        <span th:text="${#temporals.format(assignment.dueAt, 'yyyy-MM-dd HH:mm')}">마감</span>
+                        <span class="badge text-bg-dark ms-1" th:if="${assignment.pastDue}">마감 지남</span>
+                    </dd>
+                    <dt class="col-sm-2">지각 제출</dt>
+                    <dd class="col-sm-10 mb-1">
+                        <span th:if="${!assignment.allowLate}">허용하지 않음</span>
+                        <span th:if="${assignment.allowLate}">허용
+                            <span class="text-muted" th:if="${assignment.lateUntil != null}" th:text="'(' + ${#temporals.format(assignment.lateUntil, 'yyyy-MM-dd HH:mm')} + '까지)'"></span></span>
+                    </dd>
+                    <dt class="col-sm-2" th:if="${autoGrading}">자동 채점</dt>
+                    <dd class="col-sm-10 mb-1" th:if="${autoGrading}">제출할 때마다 자동으로 채점됩니다. 결과는 제출 화면과 제출 이력에서 볼 수 있습니다.</dd>
+                    <dt class="col-sm-2" sec:authorize="hasRole('PROFESSOR')">뼈대 코드</dt>
+                    <dd class="col-sm-10 mb-0" sec:authorize="hasRole('PROFESSOR')" th:text="${assignment.hasBaseline} ? '등록됨 (표절 검사에서 제외)' : '없음'">없음</dd>
+                </dl>
+            </div>
         </div>
     </div>
 
@@ -54,14 +59,14 @@
                         <div class="form-text">제출할 때마다 새 버전이 쌓이고, 이전 버전은 그대로 보관됩니다.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="message">제출 메모 <small class="text-muted">(커밋 메시지처럼 이번 버전에서 무엇을 바꿨는지)</small></label>
+                        <label class="form-label" for="message">제출 메모 <small class="text-muted fw-normal">(커밋 메시지처럼 이번 버전에서 무엇을 바꿨는지)</small></label>
                         <input class="form-control" id="message" name="message" maxlength="500" placeholder="예: 리뷰 반영해서 null 체크 추가">
                     </div>
                     <button class="btn btn-primary" type="submit">제출</button>
                 </form>
-                <hr th:if="${assignment.open}">
+                <hr class="my-4" th:if="${assignment.open}">
                 <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit/github(id=${assignment.id})}" method="post">
-                    <div class="fw-bold mb-2">또는 GitHub 커밋으로 제출</div>
+                    <div class="fw-semibold mb-2">또는 GitHub 커밋으로 제출</div>
                     <div class="row g-2 mb-2">
                         <div class="col-md-8">
                             <label class="form-label small mb-1" for="repoUrl">공개 저장소 주소</label>
@@ -73,8 +78,8 @@
                         </div>
                     </div>
                     <input class="form-control mb-2" name="message" maxlength="500" placeholder="제출 메모 (비우면 커밋 메시지 첫 줄)">
-                    <div class="form-text mb-2">github.com 의 공개 저장소만 가능합니다. 소스 파일(.java, .py, .c 등)만 가져오고, 직전 버전과 같은 커밋은 다시 제출할 수 없습니다.</div>
-                    <button class="btn btn-dark" type="submit">GitHub 에서 가져와 제출</button>
+                    <div class="form-text mb-3">github.com 의 공개 저장소만 가능합니다. 소스 파일(.java, .py, .c 등)만 가져오고, 직전 버전과 같은 커밋은 다시 제출할 수 없습니다.</div>
+                    <button class="btn btn-outline-secondary" type="submit">GitHub 에서 가져와 제출</button>
                 </form>
             </div>
         </div>
@@ -83,7 +88,10 @@
         <th:block th:replace="~{submissions/fragments :: feedbackCard(${feedback}, true, false, null, null, null)}"></th:block>
 
         <div class="card shadow-sm mb-4">
-            <div class="card-header"><strong>내 제출 이력</strong> <span class="text-muted" th:text="${#lists.size(history.versions)} + '개 버전'"></span></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>내 제출 이력</strong>
+                <span class="badge text-bg-secondary" th:text="${#lists.size(history.versions)} + '개 버전'"></span>
+            </div>
             <div class="card-body" th:if="${#lists.isEmpty(history.versions)}"><span class="text-muted">아직 제출하지 않았습니다.</span></div>
             <th:block th:unless="${#lists.isEmpty(history.versions)}">
                 <th:block th:replace="~{submissions/fragments :: timeline(${history})}"></th:block>
@@ -105,10 +113,10 @@
                     <thead><tr><th>학생</th><th>학번</th><th>최신 버전</th><th>제출 시각</th><th>상태</th><th>점수</th><th>피드백 반영</th><th></th></tr></thead>
                     <tbody>
                     <tr th:each="s : ${status}">
-                        <td th:text="${s.name}">이름</td>
-                        <td th:text="${s.studentNo}">학번</td>
+                        <td class="fw-medium" th:text="${s.name}">이름</td>
+                        <td class="text-muted" th:text="${s.studentNo}">학번</td>
                         <td><span th:if="${s.submitted}" th:text="'v' + ${s.latestVersion} + ' (총 ' + ${s.versions} + '개)'"></span></td>
-                        <td th:text="${s.submittedAt != null} ? ${#temporals.format(s.submittedAt, 'MM-dd HH:mm')} : ''"></td>
+                        <td class="text-muted" th:text="${s.submittedAt != null} ? ${#temporals.format(s.submittedAt, 'MM-dd HH:mm')} : ''"></td>
                         <td>
                             <span class="badge text-bg-secondary" th:unless="${s.submitted}">미제출</span>
                             <span class="badge text-bg-success" th:if="${s.submitted and !s.late}">제출</span>

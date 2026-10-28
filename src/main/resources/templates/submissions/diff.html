@@ -9,18 +9,18 @@
         <li class="breadcrumb-item"><a th:href="@{/assignments/{a}/students/{s}(a=${diff.assignmentId},s=${diff.studentId})}" th:text="${diff.studentName}">학생</a></li>
         <li class="breadcrumb-item active" th:text="'v' + ${diff.fromVersion} + ' → v' + ${diff.toVersion}">비교</li></ol></nav>
 
-    <h1 class="h4 mb-3">버전 비교 <small class="text-muted" th:text="${diff.studentName}"></small></h1>
+    <h1 class="h4 mb-3">버전 비교 <small class="text-muted fw-normal ms-1" th:text="${diff.studentName}"></small></h1>
 
     <!-- 옵션 폼: 바꾸면 바로 다시 불러온다 -->
     <form method="get" id="diffForm" class="card shadow-sm mb-3"
           th:action="@{/assignments/{a}/students/{s}/diff(a=${diff.assignmentId},s=${diff.studentId})}">
-        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-3">
+        <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
             <div class="d-flex align-items-center gap-2">
                 <select class="form-select form-select-sm w-auto" name="from" aria-label="이전 버전">
                     <option th:each="v : ${diff.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
                             th:selected="${v.id == diff.fromId}"></option>
                 </select>
-                <span>→</span>
+                <span class="text-muted">→</span>
                 <select class="form-select form-select-sm w-auto" name="to" aria-label="새 버전">
                     <option th:each="v : ${diff.versions}" th:value="${v.id}" th:text="'v' + ${v.versionNo}"
                             th:selected="${v.id == diff.toId}"></option>
@@ -43,7 +43,7 @@
                 <label class="form-check-label small" for="foldSw">변경 없는 긴 구간 접기</label>
             </div>
             <input type="hidden" name="file" th:value="${diff.selectedPath}">
-            <button class="btn btn-sm btn-primary" type="submit">적용</button>
+            <button class="btn btn-sm btn-primary ms-auto" type="submit">적용</button>
         </div>
     </form>
 
@@ -54,14 +54,14 @@
                 <div class="card-body p-2 file-tree">
                     <a th:each="c : ${diff.changes}" th:classappend="${c.path == diff.selectedPath} ? 'active'"
                        th:href="@{/assignments/{a}/students/{s}/diff(a=${diff.assignmentId},s=${diff.studentId},from=${diff.fromId},to=${diff.toId},file=${c.path},mode=${diff.mode},ws=${diff.ignoreWhitespace} ? '1' : '0',fold=${diff.fold} ? '1' : '0')}">
-                        <span class="d-block text-truncate" th:text="${c.path}" th:title="${c.path}">path</span>
-                        <small>
+                        <span class="d-block text-truncate mb-1" th:text="${c.path}" th:title="${c.path}">path</span>
+                        <small class="d-flex align-items-center gap-1 flex-wrap">
                             <span class="badge text-bg-success" th:if="${c.status == 'ADDED'}">추가</span>
                             <span class="badge text-bg-danger" th:if="${c.status == 'REMOVED'}">삭제</span>
                             <span class="badge text-bg-primary" th:if="${c.status == 'MODIFIED'}">수정</span>
                             <span class="badge text-bg-light text-muted" th:if="${c.status == 'UNCHANGED'}">변경 없음</span>
-                            <span class="text-success" th:if="${c.added > 0}" th:text="'+' + ${c.added}"></span>
-                            <span class="text-danger" th:if="${c.removed > 0}" th:text="'-' + ${c.removed}"></span>
+                            <span class="text-success code" th:if="${c.added > 0}" th:text="'+' + ${c.added}"></span>
+                            <span class="text-danger code" th:if="${c.removed > 0}" th:text="'-' + ${c.removed}"></span>
                             <span th:if="${c.binary}" class="text-muted">바이너리</span>
                         </small>
                     </a>
@@ -72,10 +72,10 @@
 
         <div class="col-md-9">
             <div class="card shadow-sm" th:if="${diff.selectedPath != null}">
-                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <div class="card-header d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
                     <code th:text="${diff.selectedPath}">path</code>
                     <span class="small text-muted">
-                        <span th:text="${diff.summary}">+1 -1</span>
+                        <span class="code" th:text="${diff.summary}">+1 -1</span>
                         <span th:if="${canComment and diff.toFileId != null and !diff.selectedBinary}"> · 오른쪽(새 버전) 줄 번호를 클릭해 코멘트</span>
                     </span>
                 </div>

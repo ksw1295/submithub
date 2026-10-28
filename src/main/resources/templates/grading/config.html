@@ -8,10 +8,10 @@
         <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${assignment.id})}" th:text="${assignment.title}">과제</a></li>
         <li class="breadcrumb-item active">자동 채점 설정</li></ol></nav>
 
-    <h1 class="h3 mb-3">자동 채점 설정 <small class="text-muted" th:text="${assignment.title}"></small></h1>
+    <h1 class="h3 mb-3">자동 채점 설정 <small class="text-muted fw-normal ms-1" th:text="${assignment.title}"></small></h1>
 
     <div class="alert alert-success small" th:if="${cfg.runnerAvailable}">
-        ✔ 채점 실행기를 쓸 수 있습니다 (<span th:text="${cfg.runnerName}">docker</span>). 제출 코드는 네트워크가 막힌 격리 컨테이너에서만 실행됩니다.
+        채점 실행기를 쓸 수 있습니다 (<strong th:text="${cfg.runnerName}">docker</strong>). 제출 코드는 네트워크가 막힌 격리 컨테이너에서만 실행됩니다.
     </div>
     <div class="alert alert-warning" th:unless="${cfg.runnerAvailable}">
         <strong>채점 사용 불가</strong> — 이 서버에서 Docker 를 쓸 수 없습니다. 설정과 테스트 케이스는 등록해 둘 수 있지만, Docker 가 켜지기 전까지는
@@ -33,10 +33,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="mainFile">실행할 파일</label>
-                            <input class="form-control" id="mainFile" name="mainFile" th:value="${cfg.mainFile}" required maxlength="200">
+                            <input class="form-control code" id="mainFile" name="mainFile" th:value="${cfg.mainFile}" required maxlength="200">
                             <div class="form-text">Java: 기본 패키지의 main 이 있는 파일(예: Main.java), Python: main.py. zip 안의 경로는 그대로 씁니다.</div>
                         </div>
-                        <div class="row">
+                        <div class="row g-2">
                             <div class="col-6 mb-3">
                                 <label class="form-label" for="timeLimitSeconds">시간 제한 (초/케이스)</label>
                                 <input class="form-control" id="timeLimitSeconds" name="timeLimitSeconds" type="number" min="1" max="30" th:value="${cfg.timeLimitSeconds}" required>
@@ -56,25 +56,25 @@
                 <div class="card-header"><strong>테스트 케이스 추가</strong></div>
                 <div class="card-body">
                     <form method="post" th:action="@{/assignments/{id}/grading/cases(id=${assignment.id})}">
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label" for="name">이름</label>
                             <input class="form-control" id="name" name="name" required maxlength="100" placeholder="예: 기본 동작">
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label" for="input">표준입력</label>
                             <textarea class="form-control code" id="input" name="input" rows="4" maxlength="20000" placeholder="프로그램에 넣을 입력 (없으면 비워 둠)"></textarea>
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label" for="expected">기대 출력</label>
                             <textarea class="form-control code" id="expected" name="expected" rows="4" maxlength="20000" required></textarea>
                             <div class="form-text">줄 끝 공백, 줄바꿈 종류(CRLF/LF), 끝의 빈 줄 차이는 무시하고 나머지는 정확히 비교합니다.</div>
                         </div>
-                        <div class="row align-items-end">
-                            <div class="col-6 mb-2">
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-6">
                                 <label class="form-label" for="points">배점</label>
                                 <input class="form-control" id="points" name="points" type="number" min="0" max="1000" value="20" required>
                             </div>
-                            <div class="col-6 mb-2">
+                            <div class="col-6">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="publicCase" name="publicCase" value="true">
                                     <label class="form-check-label" for="publicCase">공개 케이스</label>
@@ -98,9 +98,9 @@
                     <span class="text-muted" th:text="${cfg.configured} ? '아직 테스트 케이스가 없습니다. 왼쪽에서 추가하세요.' : '먼저 실행 설정을 저장하세요.'">없음</span>
                 </div>
                 <ul class="list-group list-group-flush" th:unless="${#lists.isEmpty(cfg.cases)}">
-                    <li class="list-group-item" th:each="c, st : ${cfg.cases}">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
-                            <div>
+                    <li class="list-group-item py-3" th:each="c, st : ${cfg.cases}">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <strong th:text="${st.count} + '. ' + ${c.name}">케이스</strong>
                                 <span class="badge text-bg-info" th:if="${c.publicCase}">공개</span>
                                 <span class="badge text-bg-secondary" th:unless="${c.publicCase}">비공개</span>
@@ -110,9 +110,9 @@
                                 <button class="btn btn-sm btn-outline-danger py-0" type="submit">삭제</button>
                             </form>
                         </div>
-                        <div class="row g-2 mt-1 small">
-                            <div class="col-md-6"><div class="text-muted">입력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.input} ?: '(없음)'">입력</pre></div>
-                            <div class="col-md-6"><div class="text-muted">기대 출력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.expected}">출력</pre></div>
+                        <div class="row g-2 small">
+                            <div class="col-md-6"><div class="text-muted mb-1">입력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.input} ?: '(없음)'">입력</pre></div>
+                            <div class="col-md-6"><div class="text-muted mb-1">기대 출력</div><pre class="border rounded p-2 mb-0 bg-light" th:text="${c.expected}">출력</pre></div>
                         </div>
                     </li>
                 </ul>

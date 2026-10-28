@@ -3,8 +3,11 @@
 <head><title>내 강의</title></head>
 <body>
 <main>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0">내 강의</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">내 강의</h1>
+            <p class="text-muted small mb-0">수강 중이거나 운영 중인 강의 목록입니다.</p>
+        </div>
         <div>
             <a class="btn btn-primary" sec:authorize="hasRole('PROFESSOR')" th:href="@{/courses/new}">강의 개설</a>
             <a class="btn btn-primary" sec:authorize="hasRole('STUDENT')" th:href="@{/courses/join}">초대 코드로 수강 등록</a>
@@ -16,15 +19,20 @@
     </div>
     <div class="row g-3">
         <div class="col-md-6 col-lg-4" th:each="c : ${courses}">
-            <a class="text-decoration-none text-reset" th:href="@{/courses/{id}(id=${c.id})}">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h2 class="h5 card-title" th:text="${c.name}">강의명</h2>
-                        <p class="text-muted mb-1" th:text="${c.semester}">학기</p>
-                        <p class="small mb-0">
-                            <span sec:authorize="hasRole('STUDENT')">담당 <span th:text="${c.professorName}">교수</span></span>
-                            <span sec:authorize="hasRole('PROFESSOR')">수강생 <span th:text="${c.studentCount}">0</span>명</span>
-                        </p>
+            <a class="text-decoration-none text-reset d-block h-100" th:href="@{/courses/{id}(id=${c.id})}">
+                <div class="card course-card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column justify-content-between p-4">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <span class="badge text-bg-secondary" th:text="${c.semester}">학기</span>
+                            </div>
+                            <h2 class="h5 card-title mb-2" th:text="${c.name}">강의명</h2>
+                        </div>
+                        <div class="pt-3 mt-2 border-top d-flex justify-content-between align-items-center small text-muted">
+                            <span sec:authorize="hasRole('STUDENT')">담당 <strong class="text-dark fw-medium" th:text="${c.professorName}">교수</strong></span>
+                            <span sec:authorize="hasRole('PROFESSOR')">수강생 <strong class="text-dark fw-medium" th:text="${c.studentCount}">0</strong>명</span>
+                            <span class="text-primary fw-medium">열기 →</span>
+                        </div>
                     </div>
                 </div>
             </a>

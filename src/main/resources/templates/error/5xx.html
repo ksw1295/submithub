@@ -3,11 +3,18 @@
 <head><title>서버 오류</title></head>
 <body>
 <main>
-    <div class="text-center py-5">
-        <h1 class="display-4">오류</h1>
-        <p class="lead">서버에서 문제가 발생했습니다.</p>
-        <p class="text-muted" th:if="${detail}" th:text="${detail}">잠시 후 다시 시도해 주세요.</p>
-        <a class="btn btn-primary" th:href="@{/}">처음으로</a>
+    <div class="row justify-content-center py-5">
+        <div class="col-md-6 col-lg-5 text-center">
+            <div class="card shadow-sm p-4">
+                <div class="card-body">
+                    <span class="badge text-bg-danger mb-2">Server Error</span>
+                    <h1 class="display-6 fw-bold mb-2">오류</h1>
+                    <p class="lead fs-6 mb-2">서버에서 문제가 발생했습니다.</p>
+                    <p class="text-muted small mb-4" th:if="${detail}" th:text="${detail}">잠시 후 다시 시도해 주세요.</p>
+                    <a class="btn btn-primary" th:href="@{/}">처음으로 돌아가기</a>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 </body>

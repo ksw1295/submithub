@@ -6,22 +6,24 @@
   c = FeedbackService.TrackedComment
 -->
 <div th:fragment="box(c, student, back)"
-     class="small mt-2 p-2 border rounded bg-light"
+     class="small mt-2 ai-verdict-box"
      th:if="${c.aiVerdict != null and (!student or c.aiDecision == 'ACCEPTED')}"
      th:id="'ai' + ${c.aiJudgementId}">
-    <span class="badge text-bg-dark">AI 판정</span>
-    <span class="badge text-bg-success" th:if="${c.aiVerdict == 'RESOLVED'}">해결됨</span>
-    <span class="badge text-bg-warning" th:if="${c.aiVerdict == 'PARTIAL'}">부분 해결</span>
-    <span class="badge text-bg-danger" th:if="${c.aiVerdict == 'NOT_RESOLVED'}">미해결</span>
-    <span class="badge text-bg-secondary" th:if="${c.aiVerdict == 'FAILED'}">판정 실패</span>
-    <span class="text-muted" th:if="${c.aiDecision == 'ACCEPTED'}">· 교수가 수락함</span>
-    <span class="text-muted" th:if="${c.aiDecision == 'IGNORED'}">· 교수가 무시함</span>
-    <span class="text-muted" th:if="${c.aiDecision == 'PENDING' and c.aiVerdict != 'FAILED'}">· 교수 확인 대기</span>
-    <div class="mt-1" th:text="${c.aiReason}">근거</div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <span class="badge text-bg-dark">AI 판정</span>
+        <span class="badge text-bg-success" th:if="${c.aiVerdict == 'RESOLVED'}">해결됨</span>
+        <span class="badge text-bg-warning" th:if="${c.aiVerdict == 'PARTIAL'}">부분 해결</span>
+        <span class="badge text-bg-danger" th:if="${c.aiVerdict == 'NOT_RESOLVED'}">미해결</span>
+        <span class="badge text-bg-secondary" th:if="${c.aiVerdict == 'FAILED'}">판정 실패</span>
+        <span class="text-muted" th:if="${c.aiDecision == 'ACCEPTED'}">· 교수가 수락함</span>
+        <span class="text-muted" th:if="${c.aiDecision == 'IGNORED'}">· 교수가 무시함</span>
+        <span class="text-muted" th:if="${c.aiDecision == 'PENDING' and c.aiVerdict != 'FAILED'}">· 교수 확인 대기</span>
+    </div>
+    <div class="mt-1 text-dark" th:text="${c.aiReason}">근거</div>
     <div class="mt-1 text-muted"
          th:if="${c.aiVerdict != 'FAILED' and c.aiVerdict != 'RESOLVED' and c.aiDecision == 'ACCEPTED'}">
         수락된 판정이라 이 코멘트는 남은 피드백으로 셉니다.</div>
-    <div class="mt-1 d-flex gap-2" th:if="${!student and c.aiVerdict != 'FAILED'}">
+    <div class="mt-2 d-flex gap-2" th:if="${!student and c.aiVerdict != 'FAILED'}">
         <form method="post" th:action="@{/ai-judgements/{id}/decision(id=${c.aiJudgementId})}">
             <input type="hidden" name="back" th:value="${back}"><input type="hidden" name="decision" value="ACCEPTED">
             <button class="btn btn-sm btn-outline-success py-0" type="submit" th:disabled="${c.aiDecision == 'ACCEPTED'}">수락</button>

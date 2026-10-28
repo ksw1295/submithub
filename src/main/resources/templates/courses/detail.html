@@ -6,15 +6,20 @@
     <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a th:href="@{/courses}">내 강의</a></li>
         <li class="breadcrumb-item active" th:text="${course.name}">강의</li></ol></nav>
 
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
             <h1 class="h3 mb-1" th:text="${course.name}">강의명</h1>
-            <div class="text-muted"><span th:text="${course.semester}">학기</span> · 담당 <span th:text="${course.professorName}">교수</span></div>
+            <div class="text-muted small"><span class="badge text-bg-secondary me-1" th:text="${course.semester}">학기</span> 담당 <strong class="text-dark fw-medium" th:text="${course.professorName}">교수</strong></div>
         </div>
-        <div sec:authorize="hasRole('PROFESSOR')" class="text-end">
-            <div class="small text-muted">초대 코드</div>
-            <code class="fs-4 user-select-all" id="inviteCode" th:text="${course.inviteCode}">ABCD2345</code>
-            <div class="mt-2"><a class="btn btn-sm btn-outline-primary" th:href="@{/courses/{id}/stats(id=${course.id})}">📊 제출 통계</a></div>
+        <div sec:authorize="hasRole('PROFESSOR')" class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="invite-box">
+                <span class="small text-muted">초대 코드</span>
+                <code class="fs-5 user-select-all" id="inviteCode" th:text="${course.inviteCode}">ABCD2345</code>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" th:href="@{/courses/{id}/stats(id=${course.id})}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>제출 통계</span>
+            </a>
         </div>
     </div>
 
@@ -22,9 +27,11 @@
     <div class="card shadow-sm mb-4" sec:authorize="hasRole('PROFESSOR')" th:if="${course.aiAvailable}" id="aiSettings">
         <div class="card-body py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
-                <strong>🤖 AI 반영 판정</strong>
-                <span class="badge" th:classappend="${course.aiJudgeEnabled} ? 'text-bg-success' : 'text-bg-secondary'"
-                      th:text="${course.aiJudgeEnabled} ? '사용 중' : '꺼짐'">꺼짐</span>
+                <div class="d-flex align-items-center gap-2">
+                    <strong>AI 반영 판정</strong>
+                    <span class="badge" th:classappend="${course.aiJudgeEnabled} ? 'text-bg-success' : 'text-bg-secondary'"
+                          th:text="${course.aiJudgeEnabled} ? '사용 중' : '꺼짐'">꺼짐</span>
+                </div>
                 <div class="small text-muted mt-1">
                     코멘트가 달린 줄이 바뀐 경우, 바뀐 코드가 코멘트를 실제로 해결했는지 AI(Google Gemini)가 한 번 더 판정합니다.
                     <strong>켜면 코멘트가 달린 줄 주변의 학생 코드가 외부 AI 서비스로 전송됩니다.</strong>
@@ -40,7 +47,7 @@
         </div>
     </div>
     <div class="alert alert-info small" sec:authorize="hasRole('STUDENT')" th:if="${course.aiJudgeEnabled}">
-        🤖 이 강의는 <strong>AI 반영 판정</strong>을 사용합니다. 교수가 남긴 코멘트가 달린 줄 주변의 내 코드가
+        이 강의는 <strong>AI 반영 판정</strong>을 사용합니다. 교수가 남긴 코멘트가 달린 줄 주변의 내 코드가
         외부 AI 서비스(Google Gemini)로 전송되어, 코멘트를 해결했는지 판정하는 데 쓰입니다.
     </div>
 
@@ -56,8 +63,8 @@
                 <thead><tr><th>과제</th><th>마감</th><th>지각 허용</th><th sec:authorize="hasRole('STUDENT')">상태</th><th sec:authorize="hasRole('PROFESSOR')"></th></tr></thead>
                 <tbody>
                 <tr th:each="a : ${course.assignments}">
-                    <td><a th:href="@{/assignments/{id}(id=${a.id})}" th:text="${a.title}">과제</a></td>
-                    <td th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}">마감</td>
+                    <td><a class="fw-medium" th:href="@{/assignments/{id}(id=${a.id})}" th:text="${a.title}">과제</a></td>
+                    <td class="text-muted" th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}">마감</td>
                     <td><span th:if="${a.allowLate}">허용<small class="text-muted" th:if="${a.lateUntil != null}" th:text="' (~' + ${#temporals.format(a.lateUntil, 'MM-dd HH:mm')} + ')'"></small></span>
                         <span th:unless="${a.allowLate}" class="text-muted">불가</span></td>
                     <td sec:authorize="hasRole('STUDENT')" th:switch="${a.state}">
@@ -78,15 +85,20 @@
     </div>
 
     <div class="card shadow-sm" sec:authorize="hasRole('PROFESSOR')">
-        <div class="card-header"><strong>수강생</strong> <span class="text-muted" th:text="${#lists.size(course.students)} + '명'"></span></div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>수강생</strong>
+            <span class="badge text-bg-secondary" th:text="${#lists.size(course.students)} + '명'"></span>
+        </div>
         <div class="card-body" th:if="${#lists.isEmpty(course.students)}"><span class="text-muted">아직 등록한 학생이 없습니다. 초대 코드를 알려주세요.</span></div>
         <div class="table-responsive" th:unless="${#lists.isEmpty(course.students)}">
             <table class="table mb-0">
                 <thead><tr><th>이름</th><th>학번</th><th>학과</th><th>등록일</th></tr></thead>
                 <tbody>
                 <tr th:each="s : ${course.students}">
-                    <td th:text="${s.name}">이름</td><td th:text="${s.studentNo}">학번</td><td th:text="${s.department}">학과</td>
-                    <td th:text="${#temporals.format(s.joinedAt, 'yyyy-MM-dd')}">날짜</td>
+                    <td class="fw-medium" th:text="${s.name}">이름</td>
+                    <td class="text-muted" th:text="${s.studentNo}">학번</td>
+                    <td th:text="${s.department}">학과</td>
+                    <td class="text-muted" th:text="${#temporals.format(s.joinedAt, 'yyyy-MM-dd')}">날짜</td>
                 </tr>
                 </tbody>
             </table>

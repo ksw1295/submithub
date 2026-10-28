@@ -148,11 +148,11 @@ class PagesRenderTest {
         reviewService.addComment(f1, 3, 3, "b 의 타입을 바꾸세요", prof);     // v2 에서 int→long → 반영됨
 
         String student = body(user(stu), "/assignments/" + assignment.getId());
-        assertThat(student).contains("남은 피드백 1개").contains("🔴 미반영").contains("🟢 반영됨").contains("반영률 50%");
+        assertThat(student).contains("남은 피드백 1개").contains("미반영").contains("반영됨").contains("반영률 50%");
         assertThat(student).contains("최신 v2 2줄");
 
         String v1Page = body(user(stu), "/submissions/" + v1.id());
-        assertThat(v1Page).contains("🔴 미반영").contains("에 그대로 있음").contains("v2에서 수정됨");
+        assertThat(v1Page).contains("미반영").contains("에 그대로 있음").contains("v2에서 수정됨");
 
         String prof = body(user(this.prof), "/assignments/" + assignment.getId());
         assertThat(prof).contains("피드백 반영").contains("50%").contains("표절 검사");

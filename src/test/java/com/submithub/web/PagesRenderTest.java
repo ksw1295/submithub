@@ -279,7 +279,7 @@ class PagesRenderTest {
         // 비로그인 방문자: 소개 랜딩 페이지 렌더링
         mvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("과제 관리")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("과제 제출도 Git처럼")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인하고 시작하기")));
 
         // 별도 분리된 로그인 화면 렌더링

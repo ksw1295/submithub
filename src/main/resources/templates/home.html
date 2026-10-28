@@ -2,185 +2,1236 @@
 <html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org">
 <head><title>SubmitHub — Git 기반 과제 제출 및 코드 리뷰 플랫폼</title></head>
 <body>
-<main>
-    <!-- 1. 히어로 섹션 (서비스 소개 및 시작하기 CTA) -->
-    <section class="landing-hero text-center">
-        <div class="row justify-content-center">
-            <div class="col-lg-10 col-xl-9">
-                <span class="badge rounded-pill landing-badge px-3 py-2 mb-3">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="me-1 align-text-top"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                    스마트 과제 관리 & 코드 리뷰 플랫폼
-                </span>
-                <h1 class="landing-title display-5 fw-bold mb-3">
-                    과제 제출도 Git처럼 버전으로,<br>
-                    <span class="text-primary">줄 단위 코드 리뷰와 피드백 자동 추적</span>
-                </h1>
-                <p class="landing-desc lead mx-auto mb-4">
-                    과제를 제출할 때마다 버전이 체계적으로 쌓이고, 교수는 GitHub PR처럼 코드 줄을 직접 짚어 피드백을 남깁니다.
-                    다음 버전에서 지적받은 코드가 실제로 고쳐졌는지 시스템이 Myers Diff 알고리즘으로 자동 판정합니다.
-                </p>
-                <div class="d-flex flex-wrap justify-content-center gap-3">
-                    <a th:href="@{/login}" class="btn btn-primary btn-lg px-4 py-2 fw-semibold shadow-sm">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1 align-middle"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-                        로그인하고 시작하기
-                    </a>
-                    <a th:href="@{/signup}" class="btn btn-outline-secondary btn-lg px-4 py-2 fw-semibold">
-                        새 계정 회원가입
-                    </a>
-                </div>
-                <div class="d-flex flex-wrap justify-content-center gap-4 mt-4 pt-2 text-muted small">
-                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-success me-1 align-text-bottom"><polyline points="20 6 9 17 4 12"></polyline></svg>파일·ZIP & GitHub 커밋 제출</span>
-                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-success me-1 align-text-bottom"><polyline points="20 6 9 17 4 12"></polyline></svg>GitHub PR 스타일 줄 코멘트</span>
-                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-success me-1 align-text-bottom"><polyline points="20 6 9 17 4 12"></polyline></svg>피드백 반영 자동 판정</span>
-                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-success me-1 align-text-bottom"><polyline points="20 6 9 17 4 12"></polyline></svg>Docker 격리 채점 & MOSS 표절 검사</span>
+<main class="sh-landing">
+    <style>
+        /* ==========================================================================
+           SubmitHub Commercial SaaS Landing Page (Linear / GitHub / Raycast Style)
+           Scoped inside <main> so replacing home.html works standalone with layout.html
+           ========================================================================== */
+        .sh-landing {
+            --sh-dark: #090d16;
+            --sh-dark-surface: #0f172a;
+            --sh-dark-card: #131c31;
+            --sh-dark-border: rgba(148, 163, 184, 0.16);
+            --sh-accent: #2563eb;
+            --sh-accent-glow: rgba(37, 99, 235, 0.22);
+            --sh-emerald: #10b981;
+            --sh-amber: #f59e0b;
+            --sh-rose: #f43f5e;
+            position: relative;
+            overflow-x: clip;
+            padding-top: 0.5rem;
+        }
+
+        /* Subtle Dot Grid Backdrop behind Hero */
+        .sh-hero-wrap {
+            position: relative;
+            padding: 3.25rem 0 2.5rem;
+        }
+
+        .sh-hero-wrap::before {
+            content: "";
+            position: absolute;
+            inset: -2rem -3rem 0 -3rem;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.10), transparent 58%),
+                radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 100% 100%, 24px 24px;
+            background-position: 0 0, 0 0;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9) 40%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9) 40%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .sh-hero-inner {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Eyebrow Release Pill */
+        .sh-release-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px 5px 8px;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 1.4rem;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .sh-release-pill:hover {
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        .sh-release-tag {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: var(--font-mono, monospace);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: 0.02em;
+        }
+
+        /* Hero Headline & Subtitle */
+        .sh-hero-title {
+            font-size: clamp(2.1rem, 4.4vw, 3.35rem);
+            font-weight: 800;
+            letter-spacing: -0.035em;
+            line-height: 1.18;
+            color: #0f172a;
+            margin-bottom: 1.15rem;
+        }
+
+        .sh-hero-title .sh-gradient-text {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #0ea5e9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sh-hero-lead {
+            max-width: 660px;
+            margin: 0 auto 1.85rem;
+            font-size: 1.05rem;
+            line-height: 1.65;
+            color: #475569;
+            font-weight: 400;
+        }
+
+        /* Hero CTA Buttons */
+        .sh-cta-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 2.5rem;
+        }
+
+        .sh-btn-primary {
+            background: #0f172a;
+            color: #ffffff !important;
+            border: 1px solid #0f172a;
+            padding: 11px 24px;
+            font-size: 14.5px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .sh-btn-primary:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.22);
+        }
+
+        .sh-btn-secondary {
+            background: #ffffff;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1;
+            padding: 11px 22px;
+            font-size: 14.5px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: all 0.15s ease;
+        }
+
+        .sh-btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        /* ==========================================================================
+           3D Scroll-Tilting Interactive IDE Preview Window
+           ========================================================================== */
+        .sh-stage-perspective {
+            perspective: 1400px;
+            margin: 0 auto 3.5rem;
+            max-width: 1060px;
+        }
+
+        .sh-ide-window {
+            background: var(--sh-dark);
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            box-shadow:
+                0 28px 60px -15px rgba(15, 23, 42, 0.35),
+                0 0 0 1px rgba(255, 255, 255, 0.07) inset;
+            overflow: hidden;
+            transform: rotateX(var(--hero-tilt, 11deg)) scale(var(--hero-scale, 0.965));
+            transform-origin: center top;
+            transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+            will-change: transform;
+            text-align: left;
+            color: #e2e8f0;
+        }
+
+        .sh-ide-topbar {
+            background: #0f172a;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .sh-window-dots {
+            display: flex;
+            gap: 7px;
+            align-items: center;
+        }
+
+        .sh-window-dots span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .sh-dot-red { background: #ef4444; }
+        .sh-dot-amber { background: #f59e0b; }
+        .sh-dot-green { background: #22c55e; }
+
+        .sh-ide-tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .sh-ide-tab {
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sh-ide-tab.active {
+            background: #1e293b;
+            color: #f8fafc;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .sh-ide-status {
+            font-family: var(--font-mono, monospace);
+            font-size: 11.5px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sh-pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+            display: inline-block;
+        }
+
+        .sh-ide-body {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: 360px;
+        }
+
+        @media (max-width: 767.98px) {
+            .sh-ide-body {
+                grid-template-columns: 1fr;
+            }
+            .sh-ide-sidebar {
+                display: none;
+            }
+        }
+
+        .sh-ide-sidebar {
+            background: #0b1120;
+            border-right: 1px solid rgba(148, 163, 184, 0.12);
+            padding: 14px 12px;
+            font-size: 12.5px;
+        }
+
+        .sh-ide-side-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #64748b;
+            margin-bottom: 8px;
+            padding: 0 6px;
+        }
+
+        .sh-ide-file {
+            padding: 6px 8px;
+            border-radius: 6px;
+            color: #94a3b8;
+            font-family: var(--font-mono, monospace);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .sh-ide-file.active {
+            background: rgba(37, 99, 235, 0.16);
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .sh-ide-main {
+            padding: 0;
+            font-family: var(--font-mono, monospace);
+            font-size: 12.5px;
+            line-height: 1.65;
+            background: #090d16;
+        }
+
+        .sh-ide-pane {
+            display: none;
+        }
+
+        .sh-ide-pane.active {
+            display: block;
+            animation: shFadeIn 0.22s ease;
+        }
+
+        @keyframes shFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sh-code-row {
+            display: grid;
+            grid-template-columns: 46px 1fr;
+            padding: 1px 14px 1px 0;
+        }
+
+        .sh-code-ln {
+            text-align: right;
+            padding-right: 14px;
+            color: #475569;
+            user-select: none;
+            font-size: 11.5px;
+        }
+
+        .sh-code-src {
+            white-space: pre-wrap;
+            color: #cbd5e1;
+        }
+
+        .sh-code-row.sh-row-del {
+            background: rgba(244, 63, 94, 0.13);
+            border-left: 3px solid #f43f5e;
+        }
+
+        .sh-code-row.sh-row-del .sh-code-src { color: #fda4af; }
+
+        .sh-code-row.sh-row-add {
+            background: rgba(16, 185, 129, 0.14);
+            border-left: 3px solid #10b981;
+        }
+
+        .sh-code-row.sh-row-add .sh-code-src { color: #6ee7b7; }
+
+        .sh-code-row.sh-row-pick {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 3px solid #f59e0b;
+        }
+
+        /* Inline Review Bubble inside Dark IDE */
+        .sh-inline-review {
+            margin: 8px 16px 8px 46px;
+            background: #131c31;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-family: var(--font-sans, sans-serif);
+            font-size: 13px;
+            color: #e2e8f0;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .sh-review-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .sh-pill-emerald {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .sh-pill-amber {
+            background: rgba(245, 158, 11, 0.18);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .sh-pill-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* ==========================================================================
+           Sticky Scrollytelling Section (Left Narrative + Right Dynamic Live Screen)
+           ========================================================================== */
+        .sh-scrolly-section {
+            padding: 3.5rem 0;
+            position: relative;
+        }
+
+        .sh-section-eyebrow {
+            font-family: var(--font-mono, monospace);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--sh-accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .sh-section-heading {
+            font-size: clamp(1.55rem, 2.8vw, 2.15rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+            margin-bottom: 0.6rem;
+        }
+
+        .sh-step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1rem 0 2rem;
+        }
+
+        .sh-scroll-step {
+            padding: 1.5rem 1.6rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            opacity: 0.52;
+            transform: translateX(0);
+            transition: opacity 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .sh-scroll-step:hover {
+            opacity: 0.85;
+        }
+
+        .sh-scroll-step.is-active {
+            opacity: 1;
+            border-color: #93c5fd;
+            box-shadow: 0 12px 28px -8px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+            transform: translateX(4px);
+        }
+
+        .sh-scroll-step.is-active::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 16px;
+            bottom: 16px;
+            width: 4px;
+            background: var(--sh-accent);
+            border-radius: 4px;
+        }
+
+        .sh-step-badge {
+            font-family: var(--font-mono, monospace);
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--sh-accent);
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 2px 9px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 0.6rem;
+        }
+
+        .sh-sticky-stage {
+            position: sticky;
+            top: 86px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.25);
+            overflow: hidden;
+            min-height: 410px;
+            color: #e2e8f0;
+        }
+
+        .sh-stage-header {
+            background: #131c31;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            padding: 11px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12.5px;
+        }
+
+        .sh-stage-card {
+            display: none;
+            padding: 20px;
+            animation: shSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sh-stage-card.is-active {
+            display: block;
+        }
+
+        @keyframes shSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sh-term-box {
+            background: #090d16;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 8px;
+            padding: 14px;
+            font-family: var(--font-mono, monospace);
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
+        .sh-case-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: 7px;
+            background: rgba(30, 41, 59, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            margin-top: 8px;
+            font-size: 12.5px;
+        }
+
+        /* ==========================================================================
+           Asymmetric Bento Grid (Replacing Generic 6-Card AI Grid)
+           ========================================================================== */
+        .sh-bento-section {
+            padding: 2.5rem 0 3.5rem;
+        }
+
+        .sh-bento-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.75rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sh-bento-card:hover {
+            transform: translateY(-3px);
+            border-color: #cbd5e1;
+            box-shadow: 0 14px 30px -10px rgba(15, 23, 42, 0.08);
+        }
+
+        .sh-bento-dark {
+            background: #0f172a;
+            border-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .sh-bento-dark:hover {
+            border-color: #334155;
+        }
+
+        .sh-bento-visual {
+            margin-top: 1.25rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 12px;
+        }
+
+        .sh-bento-dark .sh-bento-visual {
+            background: #090d16;
+            border-color: rgba(148, 163, 184, 0.16);
+        }
+
+        /* Scroll Reveal Animation Classes */
+        .sh-reveal {
+            opacity: 0;
+            transform: translateY(22px);
+            transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sh-reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Animated Mini Bar Chart inside Bento */
+        .sh-mini-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 76px;
+            padding-top: 10px;
+        }
+
+        .sh-mini-bar {
+            flex: 1;
+            background: #cbd5e1;
+            border-radius: 4px 4px 0 0;
+            height: var(--bar-h, 30%);
+            transform: scaleY(0.15);
+            transform-origin: bottom;
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sh-reveal.is-visible .sh-mini-bar {
+            transform: scaleY(1);
+        }
+
+        .sh-mini-bar.peak {
+            background: #2563eb;
+        }
+
+        /* Bottom Dark CTA Banner */
+        .sh-bottom-cta {
+            background: radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.28), transparent 55%), #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            color: #f8fafc;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+
+    <!-- ======================================================================
+         1. HERO SECTION + SCROLL-REACTIVE 3D IDE PREVIEW
+         ====================================================================== -->
+    <section class="sh-hero-wrap text-center">
+        <div class="sh-hero-inner">
+            <div class="sh-release-pill">
+                <span class="sh-release-tag">SubmitHub Engine</span>
+                <span>Myers Diff 줄 추적 · Docker 격리 채점 · Winnowing 표절 검증</span>
+            </div>
+
+            <h1 class="sh-hero-title">
+                과제 제출도 Git처럼 버전으로,<br>
+                <span class="sh-gradient-text">줄 단위 코드 리뷰와 피드백 자동 추적</span>
+            </h1>
+
+            <p class="sh-hero-lead">
+                학생이 제출할 때마다 <code>v1</code>, <code>v2</code> 버전이 보존되고, 교수는 코드의 정확한 줄을 짚어 리뷰합니다.
+                다음 제출에서 지적받은 줄이 실제로 고쳐졌는지 <strong>Myers Diff</strong>와 <strong>AI 판정기</strong>가 실시간으로 추적합니다.
+            </p>
+
+            <div class="sh-cta-group">
+                <a th:href="@{/login}" class="sh-btn-primary text-decoration-none">
+                    <span>로그인하고 시작하기</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+                <a th:href="@{/signup}" class="sh-btn-secondary text-decoration-none">
+                    <span>새 계정 회원가입</span>
+                </a>
+            </div>
+
+            <!-- 3D Perspective IDE Mockup that flattens dynamically on scroll -->
+            <div class="sh-stage-perspective">
+                <div class="sh-ide-window" id="heroIdeWindow">
+                    <div class="sh-ide-topbar">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="sh-window-dots" aria-hidden="true">
+                                <span class="sh-dot-red"></span>
+                                <span class="sh-dot-amber"></span>
+                                <span class="sh-dot-green"></span>
+                            </div>
+                            <span class="small fw-semibold text-light">자료구조 · 과제 #2 이진 탐색 트리 구현</span>
+                        </div>
+
+                        <div class="sh-ide-tabs" role="tablist" aria-label="데모 미리보기 탭">
+                            <button type="button" class="sh-ide-tab active" data-ide-tab="review">1. 인라인 코드 리뷰 (v1)</button>
+                            <button type="button" class="sh-ide-tab" data-ide-tab="diff">2. 버전 비교 &amp; AI 판정 (v1→v2)</button>
+                            <button type="button" class="sh-ide-tab" data-ide-tab="moss">3. MOSS 표절 비교</button>
+                        </div>
+
+                        <div class="sh-ide-status">
+                            <span class="sh-pulse-dot"></span>
+                            <span>자동 채점 5/5 통과 · 100점</span>
+                        </div>
+                    </div>
+
+                    <div class="sh-ide-body">
+                        <div class="sh-ide-sidebar">
+                            <div class="sh-ide-side-label">탐색기 · v2 (최신)</div>
+                            <div class="sh-ide-file active">
+                                <span>src/BinarySearchTree.java</span>
+                                <span class="text-success">+6 -1</span>
+                            </div>
+                            <div class="sh-ide-file">
+                                <span>src/Node.java</span>
+                                <span class="text-secondary">동일</span>
+                            </div>
+                            <div class="sh-ide-file">
+                                <span>src/Main.java</span>
+                                <span class="text-info">+2</span>
+                            </div>
+                            <div class="sh-ide-side-label mt-4">피드백 반영 현황</div>
+                            <div class="p-2 rounded" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-light fw-semibold">반영률</span>
+                                    <span style="color:#34d399;" class="fw-bold">100% (2/2)</span>
+                                </div>
+                                <div class="progress" style="height: 5px; background: rgba(255,255,255,0.1);">
+                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sh-ide-main">
+                            <!-- Pane 1: Inline Code Review -->
+                            <div class="sh-ide-pane active" id="idePane-review">
+                                <div class="px-3 py-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-between small text-secondary">
+                                    <span>src/BinarySearchTree.java · 줄 번호 클릭으로 범위 코멘트 작성</span>
+                                    <span>UTF-8 · Java 17</span>
+                                </div>
+                                <div class="py-2">
+                                    <div class="sh-code-row"><span class="sh-code-ln">21</span><span class="sh-code-src">public class BinarySearchTree {</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">22</span><span class="sh-code-src">    private Node root;</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">23</span><span class="sh-code-src"></span></div>
+                                    <div class="sh-code-row sh-row-pick"><span class="sh-code-ln">24</span><span class="sh-code-src">    public Node search(int key) {</span></div>
+                                    <div class="sh-code-row sh-row-pick"><span class="sh-code-ln">25</span><span class="sh-code-src">        return searchRecursive(root.left, key); // 버그 위치</span></div>
+                                    <div class="sh-code-row sh-row-pick"><span class="sh-code-ln">26</span><span class="sh-code-src">    }</span></div>
+
+                                    <div class="sh-inline-review">
+                                        <div class="sh-review-meta">
+                                            <span><strong>줄 24~26</strong> · <strong class="text-white">김교수</strong> <span class="sh-pill-blue ms-1">교수</span></span>
+                                            <span class="sh-pill-emerald">v2에서 반영됨 · AI 검증 완료</span>
+                                        </div>
+                                        <div class="mb-2">루트 노드가 <code>null</code>일 때 방어 코드가 없고, 탐색 시작점이 <code>root</code>가 아니라 <code>root.left</code>로 고정되어 있습니다. 빈 트리 케이스에서 <code>NullPointerException</code>이 발생합니다.</div>
+                                        <div class="p-2 rounded small" style="background: rgba(15, 23, 42, 0.75); border-left: 3px solid #10b981;">
+                                            <span class="sh-pill-emerald me-1">AI 판정: 해결됨</span>
+                                            <span class="text-secondary">학생이 v2에서 <code>if (root == null) return null;</code> 가드를 추가하고 <code>searchRecursive(root, key)</code>로 수정하여 문제를 정확히 해결했습니다.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="sh-code-row"><span class="sh-code-ln">27</span><span class="sh-code-src">    private Node searchRecursive(Node cur, int key) {</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">28</span><span class="sh-code-src">        if (cur == null || cur.key == key) return cur;</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">29</span><span class="sh-code-src">        return key &lt; cur.key ? searchRecursive(cur.left, key) : searchRecursive(cur.right, key);</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">30</span><span class="sh-code-src">    }</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Pane 2: Diff & LineTracker -->
+                            <div class="sh-ide-pane" id="idePane-diff">
+                                <div class="px-3 py-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-between small text-secondary">
+                                    <span>Myers Diff 비교 · v1 → v2 (공백 무시 ON)</span>
+                                    <span class="text-success">+4줄 추가 · -1줄 삭제</span>
+                                </div>
+                                <div class="py-2">
+                                    <div class="sh-code-row"><span class="sh-code-ln">24</span><span class="sh-code-src">    public Node search(int key) {</span></div>
+                                    <div class="sh-code-row sh-row-del"><span class="sh-code-ln">-25</span><span class="sh-code-src">-       return searchRecursive(root.left, key);</span></div>
+                                    <div class="sh-code-row sh-row-add"><span class="sh-code-ln">+25</span><span class="sh-code-src">+       if (root == null) {</span></div>
+                                    <div class="sh-code-row sh-row-add"><span class="sh-code-ln">+26</span><span class="sh-code-src">+           return null;</span></div>
+                                    <div class="sh-code-row sh-row-add"><span class="sh-code-ln">+27</span><span class="sh-code-src">+       }</span></div>
+                                    <div class="sh-code-row sh-row-add"><span class="sh-code-ln">+28</span><span class="sh-code-src">+       return searchRecursive(root, key);</span></div>
+                                    <div class="sh-code-row"><span class="sh-code-ln">29</span><span class="sh-code-src">    }</span></div>
+                                    <div class="sh-inline-review">
+                                        <div class="sh-review-meta">
+                                            <span><strong>Myers Diff 줄 위치 추적기 (LineTracker)</strong></span>
+                                            <span class="sh-pill-emerald">상태 자동 전환: 미반영 → 반영됨</span>
+                                        </div>
+                                        <div class="text-secondary small">v1의 24~26번 줄에 달렸던 코멘트 영역이 v2의 25~28번 줄로 확장·수정된 것을 감지하여 자동으로 반영률 통계에 합산했습니다.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pane 3: Winnowing Plagiarism Comparison -->
+                            <div class="sh-ide-pane" id="idePane-moss">
+                                <div class="px-3 py-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-between small text-secondary">
+                                    <span>구조 토큰 + Winnowing 지문 비교 (변수명·주석 치환 무력화)</span>
+                                    <span class="sh-pill-amber">구조 유사도 94% 검출</span>
+                                </div>
+                                <div class="p-3 row g-2">
+                                    <div class="col-md-6">
+                                        <div class="small text-secondary mb-1">학생 A (v2) · 겹침 94%</div>
+                                        <div class="sh-term-box">
+                                            <div class="text-warning">Node findVal(Node n, int k) {</div>
+                                            <div class="text-warning">  while (n != null) {</div>
+                                            <div class="text-warning">    if (k == n.val) return n;</div>
+                                            <div class="text-warning">    n = (k &lt; n.val) ? n.l : n.r;</div>
+                                            <div class="text-warning">  }</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="small text-secondary mb-1">학생 B (v1) · 변수명·주석 변경 시도</div>
+                                        <div class="sh-term-box">
+                                            <div class="text-warning">Node lookup(Node cur, int target) {</div>
+                                            <div class="text-warning">  // 탐색 루프 주석 추가</div>
+                                            <div class="text-warning">  while (cur != null) {</div>
+                                            <div class="text-warning">    if (target == cur.key) return cur;</div>
+                                            <div class="text-warning">    cur = (target &lt; cur.key) ? cur.left : cur.right;</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 2. 핵심 수치 및 신뢰 바 (Stats & Highlights) -->
-    <div class="row g-3 mb-5">
-        <div class="col-6 col-md-3">
-            <div class="landing-stat-card">
-                <div class="landing-stat-val">Git-like</div>
-                <div class="landing-stat-label">v1 · v2 제출 버전 자동화</div>
+    <!-- ======================================================================
+         2. STICKY SCROLLYTELLING WORKFLOW (스크롤에 따라 우측 화면이 역동적으로 전환)
+         ====================================================================== -->
+    <section class="sh-scrolly-section">
+        <div class="row mb-4">
+            <div class="col-lg-7">
+                <div class="sh-section-eyebrow">Interactive Workflow</div>
+                <h2 class="sh-section-heading">스크롤을 내리면 코드 리뷰의 전 과정이 펼쳐집니다</h2>
+                <p class="text-muted mb-0">단순히 파일만 올리고 끝나는 과제방이 아닙니다. 제출부터 자동 채점, 인라인 리뷰, 재제출 추적까지 실제 개발팀의 PR 워크플로우가 그대로 돌아갑니다.</p>
             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="landing-stat-card">
-                <div class="landing-stat-val">Myers Diff</div>
-                <div class="landing-stat-label">코멘트 줄 위치 자동 추적</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="landing-stat-card">
-                <div class="landing-stat-val">Winnowing</div>
-                <div class="landing-stat-label">MOSS 수준 고정밀 표절 검출</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="landing-stat-card">
-                <div class="landing-stat-val">100% Isolated</div>
-                <div class="landing-stat-label">Docker 컨테이너 격리 채점</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- 3. 워크플로우 (어떻게 동작하나요?) -->
-    <section class="mb-5">
-        <div class="text-center mb-4">
-            <h2 class="h4 fw-bold mb-1">어떻게 동작하나요?</h2>
-            <p class="text-muted small">과제 제출부터 피드백 반영까지, 실제 소프트웨어 개발팀의 코드 리뷰 흐름을 구현했습니다.</p>
-        </div>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <div class="landing-step-item">
-                    <span class="landing-step-num">1</span>
-                    <h3 class="h6 fw-bold mb-2">과제 제출 (v1)</h3>
-                    <p class="text-muted small mb-0">학생이 소스 파일, ZIP 또는 GitHub 공개 커밋 SHA를 제출하면 v1 버전이 생성되고 Docker 컨테이너에서 즉시 컴파일·채점됩니다.</p>
+        <div class="row g-4 align-items-start">
+            <!-- Left Column: Scroll Triggers -->
+            <div class="col-lg-5">
+                <div class="sh-step-list" id="scrollySteps">
+                    <div class="sh-scroll-step is-active" data-step="0">
+                        <span class="sh-step-badge">STEP 01 · SUBMIT &amp; SANDBOX</span>
+                        <h3 class="h5 fw-bold mb-2">파일·ZIP 또는 GitHub 커밋 제출과 즉시 격리 채점</h3>
+                        <p class="text-muted small mb-0">
+                            학생이 소스 파일이나 GitHub 공개 저장소 커밋 SHA를 제출하면 <code>v1</code> 스냅샷이 생성됩니다.
+                            동시에 네트워크가 차단된 Docker 컨테이너에서 공개·비공개 테스트 케이스를 자동 실행합니다.
+                        </p>
+                    </div>
+
+                    <div class="sh-scroll-step" data-step="1">
+                        <span class="sh-step-badge">STEP 02 · INLINE CODE REVIEW</span>
+                        <h3 class="h5 fw-bold mb-2">줄 번호를 클릭해 남기는 정확한 코드 피드백</h3>
+                        <p class="text-muted small mb-0">
+                            교수는 코드 뷰어 또는 Diff 화면에서 특정 줄(또는 Shift+클릭 범위)을 바로 선택해 코멘트를 남깁니다.
+                            학생과 교수는 해당 줄 아래에서 스레드로 질의응답을 이어갈 수 있습니다.
+                        </p>
+                    </div>
+
+                    <div class="sh-scroll-step" data-step="2">
+                        <span class="sh-step-badge">STEP 03 · ITERATE &amp; DIFF</span>
+                        <h3 class="h5 fw-bold mb-2">피드백을 반영한 v2 재제출과 좌우 분할 Diff</h3>
+                        <p class="text-muted small mb-0">
+                            이전 버전을 덮어쓰지 않고 <code>v2</code>, <code>v3</code>가 타임라인으로 쌓입니다.
+                            좌우 분할(Split) 및 통합(Unified) Diff 뷰어로 어느 줄이 어떻게 고쳐졌는지 한눈에 대조합니다.
+                        </p>
+                    </div>
+
+                    <div class="sh-scroll-step" data-step="3">
+                        <span class="sh-step-badge">STEP 04 · AUTO-TRACKING &amp; AI JUDGE</span>
+                        <h3 class="h5 fw-bold mb-2">Myers Diff 줄 추적 + Gemini AI 해결 여부 판정</h3>
+                        <p class="text-muted small mb-0">
+                            교수가 이전 코멘트를 일일이 다시 찾아볼 필요가 없습니다. 다른 줄에 코드가 추가되어 줄 번호가 밀려도
+                            Myers Diff가 원래 코멘트 위치를 추적하고, AI가 실제 해결 여부를 한 번 더 검증합니다.
+                        </p>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="landing-step-item">
-                    <span class="landing-step-num">2</span>
-                    <h3 class="h6 fw-bold mb-2">줄 단위 코드 리뷰</h3>
-                    <p class="text-muted small mb-0">교수는 코드 뷰어에서 개선이 필요한 특정 줄을 클릭하여 인라인 피드백을 작성하고 점수와 함께 전달합니다.</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="landing-step-item">
-                    <span class="landing-step-num">3</span>
-                    <h3 class="h6 fw-bold mb-2">피드백 수정 후 제출 (v2)</h3>
-                    <p class="text-muted small mb-0">학생은 지적받은 사항을 확인하고 코드를 보완하여 v2 버전을 다시 제출합니다. 버전별 diff 비교도 지원됩니다.</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="landing-step-item">
-                    <span class="landing-step-num">4</span>
-                    <h3 class="h6 fw-bold mb-2">반영 여부 자동 판정</h3>
-                    <p class="text-muted small mb-0">시스템이 Myers Diff로 줄 위치 변화를 분석하여 🔴미반영, 🟢반영됨, ⚪삭제됨을 자동 판정하고 반영률을 산출합니다.</p>
+
+            <!-- Right Column: Sticky Dynamic Stage -->
+            <div class="col-lg-7">
+                <div class="sh-sticky-stage" id="scrollyStage">
+                    <div class="sh-stage-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="sh-window-dots" aria-hidden="true">
+                                <span class="sh-dot-red"></span>
+                                <span class="sh-dot-amber"></span>
+                                <span class="sh-dot-green"></span>
+                            </span>
+                            <span class="ms-2 fw-semibold text-light" id="stageTitle">Step 01 · Docker 격리 컨테이너 자동 채점</span>
+                        </div>
+                        <span class="sh-pill-blue" id="stageBadge">docker --network=none</span>
+                    </div>
+
+                    <!-- Stage 0: Docker Auto-Grading -->
+                    <div class="sh-stage-card is-active" data-stage="0">
+                        <div class="sh-term-box mb-3">
+                            <div class="text-secondary">$ docker run --rm --network=none --memory=256m --cpus=1.0 submithub-runner</div>
+                            <div class="text-light mt-1">&gt; Compiling <span class="text-info">Main.java, BinarySearchTree.java</span> ... OK (412ms)</div>
+                            <div class="text-success">&gt; Running 4 configured test cases (2 public, 2 hidden)...</div>
+                        </div>
+                        <div class="sh-case-row">
+                            <span>1. 기본 삽입 및 중위 순회 <span class="sh-pill-blue ms-1">공개</span></span>
+                            <span class="sh-pill-emerald">통과 · 25 / 25점 (38ms)</span>
+                        </div>
+                        <div class="sh-case-row">
+                            <span>2. 중복 키 처리 검증 <span class="sh-pill-blue ms-1">공개</span></span>
+                            <span class="sh-pill-emerald">통과 · 25 / 25점 (41ms)</span>
+                        </div>
+                        <div class="sh-case-row">
+                            <span>3. 빈 트리 탐색 예외 처리 <span class="badge bg-secondary ms-1">비공개</span></span>
+                            <span class="sh-pill-amber">런타임 오류 (NPE) · 0 / 25점</span>
+                        </div>
+                        <div class="sh-case-row">
+                            <span>4. 대용량 노드(N=50,000) 시간 제한 <span class="badge bg-secondary ms-1">비공개</span></span>
+                            <span class="sh-pill-emerald">통과 · 25 / 25점 (620ms)</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage 1: Inline Commenting -->
+                    <div class="sh-stage-card" data-stage="1">
+                        <div class="sh-term-box mb-3">
+                            <div class="text-secondary">// 줄 24~26 선택됨 (Shift+클릭 범위 지정)</div>
+                            <div class="text-warning">24 | public Node search(int key) {</div>
+                            <div class="text-warning">25 |     return searchRecursive(root.left, key);</div>
+                            <div class="text-warning">26 | }</div>
+                        </div>
+                        <div class="p-3 rounded" style="background:#131c31; border:1px solid rgba(96,165,250,0.35);">
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span class="fw-bold text-white">줄 24~26에 인라인 피드백 작성</span>
+                                <span class="text-secondary">Markdown 및 줄바꿈 보존</span>
+                            </div>
+                            <div class="p-2 rounded mb-2 small" style="background:#090d16; color:#e2e8f0; border:1px solid #334155;">
+                                빈 트리에서 search() 호출 시 root가 null이어서 NPE가 납니다. null 체크를 먼저 추가해 보세요!
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-secondary">등록 즉시 학생의 '남은 피드백' 카운트에 반영됩니다.</span>
+                                <span class="btn btn-sm btn-primary py-1 px-3">코멘트 남기기</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2: Split Diff v1 -> v2 -->
+                    <div class="sh-stage-card" data-stage="2">
+                        <div class="d-flex justify-content-between align-items-center mb-2 small text-secondary">
+                            <span>좌우 분할 비교 (v1 → v2)</span>
+                            <span>테스트 통과율: <strong class="text-warning">75%</strong> → <strong class="text-success">100% (▲ +25%p)</strong></span>
+                        </div>
+                        <div class="row g-2 font-monospace small">
+                            <div class="col-6">
+                                <div class="p-2 rounded" style="background:#090d16; border:1px solid rgba(244,63,94,0.3);">
+                                    <div class="text-secondary mb-1">v1 (이전 버전)</div>
+                                    <div class="text-secondary">24: public Node search(int key) {</div>
+                                    <div style="background:rgba(244,63,94,0.18); color:#fda4af;" class="px-1 rounded">-25:   return searchRecursive(root.left, key);</div>
+                                    <div class="text-secondary">26: }</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 rounded" style="background:#090d16; border:1px solid rgba(16,185,129,0.3);">
+                                    <div class="text-secondary mb-1">v2 (새 버전)</div>
+                                    <div class="text-secondary">24: public Node search(int key) {</div>
+                                    <div style="background:rgba(16,185,129,0.18); color:#6ee7b7;" class="px-1 rounded">+25:   if (root == null) return null;</div>
+                                    <div style="background:rgba(16,185,129,0.18); color:#6ee7b7;" class="px-1 rounded">+26:   return searchRecursive(root, key);</div>
+                                    <div class="text-secondary">27: }</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3: LineTracker + Gemini AI Judge -->
+                    <div class="sh-stage-card" data-stage="3">
+                        <div class="p-3 rounded mb-3" style="background:#131c31; border:1px solid rgba(16,185,129,0.35);">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-white">피드백 자동 추적 결과</span>
+                                <span class="sh-pill-emerald">반영률 100% 달성</span>
+                            </div>
+                            <div class="small text-secondary mb-2">
+                                <code>BinarySearchTree.java:24-26</code> (v1 코멘트) → <strong>v2의 25~26번 줄에서 수정 감지됨</strong>
+                            </div>
+                            <div class="p-2 rounded small" style="background:#090d16; border-left:3px solid #3b82f6;">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="sh-pill-blue">AI 판정</span>
+                                    <span class="sh-pill-emerald">해결됨 (RESOLVED)</span>
+                                    <span class="text-secondary">· 교수 수락 완료</span>
+                                </div>
+                                <div class="text-light">단순 줄바꿈이나 주석 추가가 아니라, 교수가 지적한 <code>root == null</code> 예외 처리와 루트 탐색 인자가 실제로 수정되었음을 확인했습니다.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 4. 6대 핵심 기능 소개 -->
-    <section class="mb-5">
-        <div class="text-center mb-4">
-            <h2 class="h4 fw-bold mb-1">핵심 기능 둘러보기</h2>
-            <p class="text-muted small">기존 LMS 과제방의 한계를 넘는 최신 개발자 지향 기능들을 제공합니다.</p>
+    <!-- ======================================================================
+         3. ASYMMETRIC BENTO GRID (비대칭 벤토 그리드 & 스크롤 리빌 애니메이션)
+         ====================================================================== -->
+    <section class="sh-bento-section">
+        <div class="text-center mb-4 sh-reveal">
+            <div class="sh-section-eyebrow">Built for Computer Science Courses</div>
+            <h2 class="sh-section-heading">프로그래밍 수업에 필요한 모든 도구를 하나로</h2>
+            <p class="text-muted">단순 텍스트 비교를 넘어 알고리즘과 컨테이너 기술로 채점과 코드 리뷰를 자동화합니다.</p>
         </div>
+
         <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
+            <!-- Bento 1 (7 cols): MOSS Winnowing Plagiarism Engine -->
+            <div class="col-lg-7 sh-reveal">
+                <div class="sh-bento-card">
+                    <div>
+                        <span class="sh-step-badge">STANFORD MOSS ALGORITHM</span>
+                        <h3 class="h5 fw-bold mb-2">변수명·주석·공백을 바꿔도 잡아내는 Winnowing 표절 검사</h3>
+                        <p class="text-muted small mb-0">
+                            소스코드를 언어별 구조 토큰(AST/Lexer)으로 정규화한 뒤 k-gram 해시와 Winnowing 지문을 추출합니다.
+                            교수가 배포한 <strong>뼈대 코드(Baseline)는 자동으로 제외</strong>하고 순수 학생 작성 영역만 나란히 하이라이트 비교합니다.
+                        </p>
                     </div>
-                    <h3 class="h5 fw-bold mb-2">Git 스타일 버전 관리</h3>
-                    <p class="text-muted small mb-0">제출할 때마다 v1, v2 번호가 자동으로 부여되며 이전 버전을 덮어쓰지 않고 타임라인으로 보존합니다. GitHub 커밋 연동과 마감·지각 처리를 지원합니다.</p>
+                    <div class="sh-bento-visual font-monospace">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-dark">지문 정규화 파이프라인</span>
+                            <span class="badge text-bg-warning">공통 지문 48개 일치 (유사도 92%)</span>
+                        </div>
+                        <div class="p-2 rounded bg-white border text-secondary">
+                            <code>int studentSum = 0;</code> ↔ <code>int total_val = 0;</code>
+                            <span class="text-primary fw-semibold ms-2">→ 정규화 토큰: [TYPE_INT, ID, ASSIGN, NUM] (동일 구조 판정)</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+
+            <!-- Bento 2 (5 cols, Dark): Isolated Docker Grading -->
+            <div class="col-lg-5 sh-reveal">
+                <div class="sh-bento-card sh-bento-dark">
+                    <div>
+                        <span class="sh-pill-blue mb-2 d-inline-block">CONTAINER SANDBOX</span>
+                        <h3 class="h5 fw-bold mb-2 text-white">네트워크 차단 Docker 격리 채점</h3>
+                        <p class="small mb-0" style="color:#94a3b8;">
+                            제출된 Java·Python 코드는 외부 통신이 완전히 차단된 컨테이너에서 시간 제한(초)과 메모리 상한(MB) 안에 실행되어 무한 루프나 시스템 접근을 원천 방어합니다.
+                        </p>
                     </div>
-                    <h3 class="h5 fw-bold mb-2">줄 단위 인라인 코드 리뷰</h3>
-                    <p class="text-muted small mb-0">전체 총평 대신 문제가 있는 정확한 코드 줄에 코멘트를 남깁니다. 교수와 학생 간의 질의응답 스레드를 통해 깊이 있는 코드 지도가 가능합니다.</p>
+                    <div class="sh-bento-visual font-monospace text-light">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span style="color:#94a3b8;">네트워크 격리</span>
+                            <span style="color:#34d399;">--network=none (차단됨)</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span style="color:#94a3b8;">리소스 제한</span>
+                            <span class="text-info">시간 1~30s · 메모리 64~512MB</span>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span style="color:#94a3b8;">출력 비교</span>
+                            <span class="text-warning">CRLF/LF 및 줄 끝 공백 정규화</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+
+            <!-- Bento 3 (5 cols): Submission Analytics & Charts -->
+            <div class="col-lg-5 sh-reveal">
+                <div class="sh-bento-card">
+                    <div>
+                        <span class="sh-step-badge">COURSE ANALYTICS</span>
+                        <h3 class="h5 fw-bold mb-2">마감 직전 제출 집중도 &amp; 성장 추이 통계</h3>
+                        <p class="text-muted small mb-0">
+                            과제별 제출률, 미제출자 명단, 시간대별 제출 분포와 버전이 올라갈수록 상승하는 학생들의 테스트 통과율 추이를 실시간 차트로 시각화합니다.
+                        </p>
                     </div>
-                    <h3 class="h5 fw-bold mb-2">피드백 반영 자동 추적</h3>
-                    <p class="text-muted small mb-0">교수가 일일이 이전 코멘트와 새 코드를 대조할 필요가 없습니다. Myers Diff 기반 줄 추적으로 반영률(%)과 남은 피드백 개수를 실시간으로 제시합니다.</p>
+                    <div class="sh-bento-visual">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>시간대별 제출 분포 (마감 22~23시 집중)</span>
+                            <span class="fw-semibold text-primary">평균 반영률 88%</span>
+                        </div>
+                        <div class="sh-mini-bars" aria-hidden="true">
+                            <div class="sh-mini-bar" style="--bar-h: 20%"></div>
+                            <div class="sh-mini-bar" style="--bar-h: 28%"></div>
+                            <div class="sh-mini-bar" style="--bar-h: 35%"></div>
+                            <div class="sh-mini-bar" style="--bar-h: 48%"></div>
+                            <div class="sh-mini-bar" style="--bar-h: 62%"></div>
+                            <div class="sh-mini-bar peak" style="--bar-h: 82%"></div>
+                            <div class="sh-mini-bar peak" style="--bar-h: 100%"></div>
+                            <div class="sh-mini-bar" style="--bar-h: 40%"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+
+            <!-- Bento 4 (7 cols): GitHub Commit Sync & Invite Code Workflow -->
+            <div class="col-lg-7 sh-reveal">
+                <div class="sh-bento-card">
+                    <div>
+                        <span class="sh-step-badge">GITHUB SYNC &amp; CLASSROOM</span>
+                        <h3 class="h5 fw-bold mb-2">GitHub 저장소 커밋 연동 &amp; 8자리 초대 코드 수강 관리</h3>
+                        <p class="text-muted small mb-0">
+                            파일 업로드뿐만 아니라 GitHub 공개 저장소 URL과 브랜치·커밋 SHA만 입력하면 소스 파일을 자동으로 가져와 버전을 생성합니다.
+                            교수가 강의를 개설하면 즉시 발급되는 8자리 초대 코드로 학생들이 1초 만에 합류합니다.
+                        </p>
                     </div>
-                    <h3 class="h5 fw-bold mb-2">MOSS 기반 표절 검사</h3>
-                    <p class="text-muted small mb-0">Stanford MOSS와 동일한 Winnowing 알고리즘으로 변수명 치환, 주석 추가, 공백 변경 등의 꼼수를 무력화합니다. 의심 쌍은 나란히 하이라이트 비교를 제공합니다.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                    <div class="sh-bento-visual d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge text-bg-dark font-monospace">GitHub a1b2c3d</span>
+                            <span class="text-muted small">→</span>
+                            <span class="badge text-bg-primary">v1 생성</span>
+                            <span class="text-muted small">→</span>
+                            <span class="badge text-bg-success">v2 리뷰 반영 (+14 -3)</span>
+                        </div>
+                        <span class="small text-muted font-monospace">동일 커밋 중복 제출 자동 방지</span>
                     </div>
-                    <h3 class="h5 fw-bold mb-2">Docker 격리 자동 채점</h3>
-                    <p class="text-muted small mb-0">네트워크가 차단되고 자원이 제한된 안전한 Docker 컨테이너에서 Java 및 Python 코드를 실행합니다. 버전별 테스트 케이스 통과율 추이를 보여줍니다.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="landing-feature-card">
-                    <div class="landing-feature-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    </div>
-                    <h3 class="h5 fw-bold mb-2">제출 통계 대시보드</h3>
-                    <p class="text-muted small mb-0">강의별 제출률, 미제출자 명단, 지각 비율 및 마감 직전 24시간 제출 집중도 그래프와 학생별 버전 수·반영률을 시각화 차트로 제공합니다.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 5. 하단 CTA 배너 -->
-    <section class="landing-cta-card p-5 text-center mb-4">
-        <h2 class="h3 fw-bold mb-2">지금 바로 SubmitHub를 경험해보세요</h2>
-        <p class="text-muted lead fs-6 mb-4">로그인하여 개설된 강의와 과제, 그리고 인터랙티브 코드 리뷰를 직접 확인하실 수 있습니다.</p>
-        <div class="d-flex justify-content-center gap-3">
-            <a th:href="@{/login}" class="btn btn-primary px-4 py-2 fw-semibold">
-                로그인 화면으로 이동
-            </a>
-            <a th:href="@{/signup}" class="btn btn-outline-primary px-4 py-2 fw-semibold">
-                회원가입
-            </a>
+    <!-- ======================================================================
+         4. BOTTOM CTA BANNER
+         ====================================================================== -->
+    <section class="sh-bottom-cta sh-reveal">
+        <h2 class="h3 fw-bold text-white mb-2">지금 바로 SubmitHub를 시작해 보세요</h2>
+        <p class="mb-4 mx-auto" style="max-width: 540px; color: #94a3b8;">
+            교수 계정으로 강의를 개설하거나, 학생 계정으로 초대 코드를 입력해 버전 관리형 과제 제출과 줄 단위 코드 리뷰를 직접 경험할 수 있습니다.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            <a th:href="@{/login}" class="btn btn-light px-4 py-2 fw-semibold">로그인 화면으로 이동</a>
+            <a th:href="@{/signup}" class="btn btn-outline-light px-4 py-2 fw-semibold">무료 회원가입</a>
         </div>
     </section>
+
+    <script>
+        (function () {
+            // 1. Hero IDE Tab Switching (Click + Auto-Pause on User Interaction)
+            var tabs = document.querySelectorAll('[data-ide-tab]');
+            var panes = {
+                review: document.getElementById('idePane-review'),
+                diff: document.getElementById('idePane-diff'),
+                moss: document.getElementById('idePane-moss')
+            };
+            tabs.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var target = btn.getAttribute('data-ide-tab');
+                    tabs.forEach(function (t) { t.classList.toggle('active', t === btn); });
+                    Object.keys(panes).forEach(function (k) {
+                        if (panes[k]) panes[k].classList.toggle('active', k === target);
+                    });
+                });
+            });
+
+            // 2. Scroll-Reactive 3D Hero Tilt (Flattens smoothly as user scrolls down)
+            var heroWin = document.getElementById('heroIdeWindow');
+            function onScrollTilt() {
+                if (!heroWin) return;
+                var y = window.scrollY || window.pageYOffset;
+                var progress = Math.min(1, Math.max(0, y / 320));
+                var tilt = (11 * (1 - progress)).toFixed(2);
+                var scale = (0.965 + 0.035 * progress).toFixed(3);
+                heroWin.style.setProperty('--hero-tilt', tilt + 'deg');
+                heroWin.style.setProperty('--hero-scale', scale);
+            }
+            window.addEventListener('scroll', onScrollTilt, { passive: true });
+            onScrollTilt();
+
+            // 3. Sticky Scrollytelling Step Observer
+            var steps = document.querySelectorAll('.sh-scroll-step');
+            var stages = document.querySelectorAll('.sh-stage-card');
+            var stageTitle = document.getElementById('stageTitle');
+            var stageBadge = document.getElementById('stageBadge');
+            var metaMap = [
+                { title: 'Step 01 · Docker 격리 컨테이너 자동 채점', badge: 'docker --network=none' },
+                { title: 'Step 02 · 줄 번호 클릭 인라인 코드 리뷰', badge: 'BinarySearchTree.java:24-26' },
+                { title: 'Step 03 · 버전 타임라인 & 좌우 분할 Diff', badge: 'v1 → v2 (+25%p)' },
+                { title: 'Step 04 · Myers Diff 줄 추적 & AI 판정', badge: '반영률 100% · RESOLVED' }
+            ];
+
+            function activateStep(idx) {
+                steps.forEach(function (s, i) { s.classList.toggle('is-active', i === idx); });
+                stages.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
+                if (metaMap[idx] && stageTitle && stageBadge) {
+                    stageTitle.textContent = metaMap[idx].title;
+                    stageBadge.textContent = metaMap[idx].badge;
+                }
+            }
+
+            steps.forEach(function (step, idx) {
+                step.addEventListener('click', function () {
+                    activateStep(idx);
+                });
+            });
+
+            if ('IntersectionObserver' in window) {
+                var stepObserver = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            var idx = parseInt(entry.target.getAttribute('data-step'), 10);
+                            if (!isNaN(idx)) activateStep(idx);
+                        }
+                    });
+                }, { rootMargin: '-28% 0px -45% 0px', threshold: 0.15 });
+
+                steps.forEach(function (s) { stepObserver.observe(s); });
+
+                // 4. Scroll-Reveal for Bento Cards & Sections
+                var revealObserver = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                        }
+                    });
+                }, { threshold: 0.12 });
+
+                document.querySelectorAll('.sh-reveal').forEach(function (el) {
+                    revealObserver.observe(el);
+                });
+            } else {
+                document.querySelectorAll('.sh-reveal').forEach(function (el) {
+                    el.classList.add('is-visible');
+                });
+            }
+        })();
+    </script>
 </main>
 </body>
 </html>

@@ -30,6 +30,8 @@ public final class MyersDiff {
     }
 
     public static DiffResult diff(List<String> oldLines, List<String> newLines, DiffOptions options) {
+        if (oldLines == null) oldLines = List.of();
+        if (newLines == null) newLines = List.of();
         String[] a = keys(oldLines, options);
         String[] b = keys(newLines, options);
 
@@ -47,13 +49,25 @@ public final class MyersDiff {
             suffix++;
         }
 
+        // 2) 가운데 구간만 Myers
+        List<int[]> ops = middle(a, prefix, n - suffix, b, prefix, m - suffix, options.maxEditDistance());
+        if (ops == null) {
+            // 상한 초과: 전체 교체 결과 (이전 줄 전부 REMOVED + 새 줄 전부 ADDED)를 돌려주고 truncated=true
+            List<DiffLine> fallback = new ArrayList<>(oldLines.size() + newLines.size());
+            for (int i = 0; i < oldLines.size(); i++) {
+                fallback.add(DiffLine.removed(i + 1, oldLines.get(i)));
+            }
+            for (int i = 0; i < newLines.size(); i++) {
+                fallback.add(DiffLine.added(i + 1, newLines.get(i)));
+            }
+            return new DiffResult(fallback, true);
+        }
+
         List<DiffLine> result = new ArrayList<>(n + m);
         for (int i = 0; i < prefix; i++) {
             result.add(DiffLine.equal(i + 1, i + 1, newLines.get(i)));
         }
 
-        // 2) 가운데 구간만 Myers
-        List<int[]> ops = middle(a, prefix, n - suffix, b, prefix, m - suffix);
         for (int[] op : ops) {
             int type = op[0];
             int ai = op[1];
@@ -72,7 +86,7 @@ public final class MyersDiff {
             int bi = m - suffix + i;
             result.add(DiffLine.equal(ai + 1, bi + 1, newLines.get(bi)));
         }
-        return new DiffResult(groupChanges(result));
+        return new DiffResult(groupChanges(result), false);
     }
 
     private static final int EQ = 0;
@@ -81,8 +95,9 @@ public final class MyersDiff {
 
     /**
      * a[aStart, aEnd) 와 b[bStart, bEnd) 를 비교해서 {종류, a 인덱스, b 인덱스} 목록을 돌려준다.
+     * 상한 maxEditDistance 초과 시 null 을 돌려준다.
      */
-    private static List<int[]> middle(String[] a, int aStart, int aEnd, String[] b, int bStart, int bEnd) {
+    private static List<int[]> middle(String[] a, int aStart, int aEnd, String[] b, int bStart, int bEnd, int maxEditDistance) {
         int n = aEnd - aStart;
         int m = bEnd - bStart;
         List<int[]> ops = new ArrayList<>();
@@ -99,6 +114,7 @@ public final class MyersDiff {
         }
 
         int max = n + m;
+        int limit = Math.min(max, maxEditDistance);
         int offset = max + 1;
         int[] v = new int[2 * max + 3];
         // trace.get(d) = d번째 단계를 시작하기 직전의 v 에서 k ∈ [-d-1, d+1] 구간만 복사한 것
@@ -106,7 +122,7 @@ public final class MyersDiff {
 
         int finalD = -1;
         outer:
-        for (int d = 0; d <= max; d++) {
+        for (int d = 0; d <= limit; d++) {
             trace.add(Arrays.copyOfRange(v, offset - d - 1, offset + d + 2));
             for (int k = -d; k <= d; k += 2) {
                 int x;
@@ -126,6 +142,11 @@ public final class MyersDiff {
                     break outer;
                 }
             }
+        }
+
+        if (finalD == -1) {
+            // 상한 초과
+            return null;
         }
 
         // 역추적

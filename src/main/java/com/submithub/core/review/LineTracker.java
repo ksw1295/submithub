@@ -1,6 +1,7 @@
 package com.submithub.core.review;
 
 import com.submithub.core.diff.DiffOptions;
+import com.submithub.core.diff.DiffResult;
 import com.submithub.core.diff.MyersDiff;
 import com.submithub.core.diff.SideBySide;
 
@@ -17,13 +18,14 @@ import java.util.Map;
  * - UNCHANGED : 코멘트 달린 줄이 그대로 있음 → "미반영" (최신 버전의 줄 번호도 알려줌)
  * - MODIFIED  : 줄이 수정됨 → "반영됨(확인 필요)"
  * - DELETED   : 줄이 삭제됨 → "삭제됨"
+ * - UNKNOWN   : diff 상한 초과 등으로 추적 불가 → "판정 불가"
  *
  * GitHub PR 에서 코드가 바뀌면 리뷰 코멘트가 "Outdated" 로 표시되는 것과 같은 개념이다.
  * 들여쓰기만 바꾼 것은 반영으로 보지 않도록 공백 무시 비교를 쓴다.
  */
 public final class LineTracker {
 
-    public enum Status { UNCHANGED, MODIFIED, DELETED }
+    public enum Status { UNCHANGED, MODIFIED, DELETED, UNKNOWN }
 
     /**
      * @param status          최종 판정
@@ -59,7 +61,11 @@ public final class LineTracker {
         }
 
         for (int v = 1; v < versions.size(); v++) {
-            Map<Integer, Step> mapping = map(versions.get(v - 1), versions.get(v));
+            DiffResult diff = MyersDiff.diff(versions.get(v - 1), versions.get(v), DiffOptions.IGNORE_WHITESPACE);
+            if (diff.truncated()) {
+                return new Result(Status.UNKNOWN, 0, 0, v);
+            }
+            Map<Integer, Step> mapping = map(diff);
             int deleted = 0;
             boolean changed = false;
             for (int i = 0; i < lines.length; i++) {
@@ -86,9 +92,9 @@ public final class LineTracker {
     }
 
     /** 이전 텍스트의 줄 번호 → 다음 텍스트에서의 상태 */
-    private static Map<Integer, Step> map(String oldText, String newText) {
+    private static Map<Integer, Step> map(DiffResult diff) {
         Map<Integer, Step> mapping = new HashMap<>();
-        var rows = SideBySide.build(MyersDiff.diff(oldText, newText, DiffOptions.IGNORE_WHITESPACE));
+        var rows = SideBySide.build(diff);
         for (SideBySide.Row row : rows) {
             if (row.leftLineNo() == 0) {
                 continue;

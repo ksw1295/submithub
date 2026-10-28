@@ -34,3 +34,6 @@ submithub:
   max-file-bytes: 5242880
   max-total-bytes: 20971520
   max-files: 200
+
+  diff:
+    max-edit-distance: 5000

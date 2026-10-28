@@ -78,4 +78,16 @@ class LineTrackerTest {
         assertThrows(IllegalArgumentException.class, () -> LineTracker.track(List.of(V1), 0));
         assertThrows(IllegalArgumentException.class, () -> LineTracker.track(List.of(V1), 5, 3));
     }
+
+    @Test
+    void truncatedDiffMarksAsUnknown() {
+        StringBuilder sb1 = new StringBuilder();
+        StringBuilder sb2 = new StringBuilder();
+        for (int i = 0; i < 12000; i++) {
+            sb1.append("line ").append(i).append("\n");
+            sb2.append(i % 2 == 0 ? "diff " + i : "line " + i).append("\n");
+        }
+        LineTracker.Result r = LineTracker.track(List.of(sb1.toString(), sb2.toString()), 5);
+        assertEquals(LineTracker.Status.UNKNOWN, r.status());
+    }
 }

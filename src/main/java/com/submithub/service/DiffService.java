@@ -8,6 +8,7 @@ import com.submithub.core.diff.SideBySide;
 import com.submithub.core.text.LineSplitter;
 import com.submithub.domain.Submission;
 import com.submithub.domain.SubmissionFile;
+import com.submithub.AppProperties;
 import com.submithub.domain.SubmissionRepository;
 import com.submithub.security.AppUser;
 import org.springframework.stereotype.Service;
@@ -39,17 +40,21 @@ public class DiffService {
                            String selectedPath, boolean selectedBinary, Long toFileId,
                            String mode, boolean ignoreWhitespace, boolean fold, String summary,
                            List<SideBySide.Row> splitRows, List<UnifiedRow> unifiedRows,
-                           Map<Integer, List<ReviewService.CommentThread>> threadsByNewLine) {
+                           Map<Integer, List<ReviewService.CommentThread>> threadsByNewLine,
+                           boolean truncated) {
     }
 
     private final SubmissionRepository submissions;
     private final AccessService access;
     private final ReviewService reviews;
+    private final AppProperties appProperties;
 
-    public DiffService(SubmissionRepository submissions, AccessService access, ReviewService reviews) {
+    public DiffService(SubmissionRepository submissions, AccessService access, ReviewService reviews,
+                       AppProperties appProperties) {
         this.submissions = submissions;
         this.access = access;
         this.reviews = reviews;
+        this.appProperties = appProperties;
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +86,7 @@ public class DiffService {
         List<UnifiedRow> unified = List.of();
         boolean binary = false;
         String summary = "";
+        boolean truncated = false;
         Long toFileId = null;
         Map<Integer, List<ReviewService.CommentThread>> threads = Map.of();
         if (selected != null) {
@@ -91,9 +97,13 @@ public class DiffService {
                 toFileId = fb.getId();
             }
             if (!binary) {
+                int maxD = (appProperties != null && appProperties.diff() != null)
+                        ? appProperties.diff().maxEditDistance()
+                        : DiffOptions.DEFAULT_MAX_EDIT_DISTANCE;
                 DiffResult d = MyersDiff.diff(text(fa), text(fb),
-                        ignoreWhitespace ? DiffOptions.IGNORE_WHITESPACE : DiffOptions.DEFAULT);
+                        new DiffOptions(ignoreWhitespace, maxD));
                 summary = d.summary();
+                truncated = d.truncated();
                 List<SideBySide.Row> rows = SideBySide.build(d);
                 split = fold ? SideBySide.fold(rows, CONTEXT) : rows;
                 unified = unified(d, fold);
@@ -109,7 +119,7 @@ public class DiffService {
         return new DiffView(assignmentId, to.getAssignment().getTitle(), to.getAssignment().getCourse().getId(),
                 studentId, to.getStudent().getName(), from.getId(), from.getVersionNo(), to.getId(),
                 to.getVersionNo(), links, changes, selected, binary, toFileId, viewMode, ignoreWhitespace, fold,
-                summary, split, unified, threads);
+                summary, split, unified, threads, truncated);
     }
 
     private static Submission pick(List<Submission> all, Long id, Submission fallback) {

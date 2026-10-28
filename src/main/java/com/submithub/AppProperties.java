@@ -11,10 +11,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param maxFileBytes        파일 하나의 최대 크기
  * @param maxTotalBytes       한 번의 제출(zip 풀었을 때 포함)의 최대 총 크기
  * @param maxFiles            한 번의 제출의 최대 파일 수
+ * @param diff                diff 계산 옵션
  */
 @ConfigurationProperties(prefix = "submithub")
 public record AppProperties(String storageDir, boolean demoData, String professorSignupCode,
-                            long maxFileBytes, long maxTotalBytes, int maxFiles) {
+                            long maxFileBytes, long maxTotalBytes, int maxFiles,
+                            Diff diff) {
+
+    public record Diff(int maxEditDistance) {
+        public Diff {
+            if (maxEditDistance <= 0) {
+                maxEditDistance = 5000;
+            }
+        }
+    }
 
     public AppProperties {
         if (storageDir == null || storageDir.isBlank()) {
@@ -31,6 +41,9 @@ public record AppProperties(String storageDir, boolean demoData, String professo
         }
         if (professorSignupCode == null) {
             professorSignupCode = "";
+        }
+        if (diff == null) {
+            diff = new Diff(5000);
         }
     }
 }

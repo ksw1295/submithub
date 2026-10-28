@@ -127,4 +127,45 @@ class MyersDiffTest {
         }
         return dp[0][0];
     }
+
+    @Test
+    void underMaxEditDistanceProducesNormalResult() {
+        DiffResult r = MyersDiff.diff("a\nb\nc\nd", "a\nB\nC\nd", new DiffOptions(false, 10));
+        assertFalse(r.truncated());
+        assertEquals("+2 / -2", r.summary());
+        assertEquals(6, r.lines().size());
+    }
+
+    @Test
+    void overMaxEditDistanceProducesFullReplacementAndTruncated() {
+        List<String> oldLines = List.of("a", "b", "c", "d");
+        List<String> newLines = List.of("w", "x", "y", "z");
+        DiffResult r = MyersDiff.diff(oldLines, newLines, new DiffOptions(false, 2));
+        assertTrue(r.truncated());
+        assertEquals("+4 / -4", r.summary());
+        assertEquals(8, r.lines().size());
+        for (int i = 0; i < 4; i++) {
+            assertEquals(DiffType.REMOVED, r.lines().get(i).type());
+            assertEquals(i + 1, r.lines().get(i).oldLineNo());
+            assertEquals(oldLines.get(i), r.lines().get(i).text());
+        }
+        for (int i = 0; i < 4; i++) {
+            assertEquals(DiffType.ADDED, r.lines().get(4 + i).type());
+            assertEquals(i + 1, r.lines().get(4 + i).newLineNo());
+            assertEquals(newLines.get(i), r.lines().get(4 + i).text());
+        }
+    }
+
+    @Test
+    void largeFileWithFiftyPercentChangesFinishesWithoutOom() {
+        List<String> oldLines = new ArrayList<>(20000);
+        List<String> newLines = new ArrayList<>(20000);
+        for (int i = 0; i < 20000; i++) {
+            oldLines.add("line " + i);
+            newLines.add(i % 2 == 0 ? "changed " + i : "line " + i);
+        }
+        DiffResult r = MyersDiff.diff(oldLines, newLines, DiffOptions.DEFAULT);
+        assertTrue(r.truncated());
+        assertEquals(40000, r.lines().size());
+    }
 }

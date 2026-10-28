@@ -36,7 +36,7 @@ public class SimilarityController {
     }
 
     @PostMapping("/assignments/{id}/similarity")
-    public String run(@PathVariable Long id, @RequestParam(defaultValue = "60") String percent,
+    public String run(@PathVariable Long id, @RequestParam(defaultValue = "65") String percent,
                       @AuthenticationPrincipal AppUser user, RedirectAttributes redirect) {
         double threshold;
         try {

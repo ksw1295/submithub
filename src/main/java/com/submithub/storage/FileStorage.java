@@ -52,6 +52,21 @@ public class FileStorage {
         }
     }
 
+    /** 시연 데이터 초기화 시 업로드된 모든 파일을 삭제한다. */
+    public void clearAll() {
+        if (!Files.exists(root)) {
+            return;
+        }
+        try (var stream = Files.newDirectoryStream(root)) {
+            for (Path file : stream) {
+                if (Files.isRegularFile(file)) {
+                    Files.deleteIfExists(file);
+                }
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
     private Path resolve(String name) {
         try {
             UUID.fromString(name);   // UUID 형식만 허용

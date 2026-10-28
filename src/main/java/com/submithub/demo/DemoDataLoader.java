@@ -1,5 +1,11 @@
 package com.submithub.demo;
 
+import com.submithub.domain.AiJudgementRepository;
+import com.submithub.domain.GradingRunRepository;
+import com.submithub.domain.SimilarityPairRepository;
+import com.submithub.domain.SimilarityRunRepository;
+import com.submithub.domain.SubmissionFileRepository;
+
 import com.submithub.domain.Assignment;
 import com.submithub.domain.AssignmentRepository;
 import com.submithub.domain.Course;
@@ -75,6 +81,12 @@ public class DemoDataLoader implements ApplicationRunner {
     private final GradingTestCaseRepository gradingCases;
     private final GradingService grading;
     private final TransactionTemplate tx;
+    private final AiJudgementRepository judgements;
+    private final SimilarityPairRepository similarityPairs;
+    private final SimilarityRunRepository similarityRuns;
+    private final GradingRunRepository gradingRuns;
+    private final SubmissionFileRepository files;
+    private final Object resetLock = new Object();
     /** 과제 1 의 제출 ID 들 (시드가 커밋된 뒤 자동 채점을 요청한다) */
     private final List<Long> gradedSubmissionIds = new ArrayList<>();
 
@@ -83,7 +95,10 @@ public class DemoDataLoader implements ApplicationRunner {
                           ReviewCommentRepository comments, GradeRepository grades, FileStorage storage,
                           PasswordEncoder encoder, SimilarityService similarity,
                           GradingConfigRepository gradingConfigs, GradingTestCaseRepository gradingCases,
-                          GradingService grading, PlatformTransactionManager txm) {
+                          GradingService grading, PlatformTransactionManager txm,
+                          AiJudgementRepository judgements, SimilarityPairRepository similarityPairs,
+                          SimilarityRunRepository similarityRuns, GradingRunRepository gradingRuns,
+                          SubmissionFileRepository files) {
         this.users = users;
         this.courses = courses;
         this.enrollments = enrollments;
@@ -98,6 +113,42 @@ public class DemoDataLoader implements ApplicationRunner {
         this.gradingCases = gradingCases;
         this.grading = grading;
         this.tx = new TransactionTemplate(txm);
+        this.judgements = judgements;
+        this.similarityPairs = similarityPairs;
+        this.similarityRuns = similarityRuns;
+        this.gradingRuns = gradingRuns;
+        this.files = files;
+    }
+
+    /**
+     * 시연 데이터 초기화. 실행 중 다른 요청과 충돌하지 않도록 락을 걸고,
+     * DB와 업로드 파일을 삭제한 후 시연 데이터를 재구성한다.
+     */
+    public void resetDemoData() {
+        synchronized (resetLock) {
+            log.info("시연 데이터 초기화 시작...");
+            tx.executeWithoutResult(status -> {
+                judgements.deleteAllInBatch();
+                similarityPairs.deleteAllInBatch();
+                similarityRuns.deleteAllInBatch();
+                gradingRuns.deleteAllInBatch();
+                grades.deleteAllInBatch();
+                comments.deleteAllInBatch();
+                files.deleteAllInBatch();
+                submissions.deleteAllInBatch();
+                gradingCases.deleteAllInBatch();
+                gradingConfigs.deleteAllInBatch();
+                assignments.deleteAllInBatch();
+                enrollments.deleteAllInBatch();
+                courses.deleteAllInBatch();
+                users.deleteAllInBatch();
+            });
+            storage.clearAll();
+            gradedSubmissionIds.clear();
+            tx.executeWithoutResult(status -> seed());
+            gradedSubmissionIds.forEach(grading::onNewVersion);
+            log.info("시연 데이터 초기화 완료: 사용자 {}명, 강의 {}개 등록됨", users.count(), courses.count());
+        }
     }
 
     @Override

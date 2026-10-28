@@ -1,5 +1,10 @@
 package com.submithub.service;
 
+import com.submithub.AppProperties;
+import com.submithub.domain.AiDailyUsage;
+import com.submithub.domain.AiDailyUsageRepository;
+import java.time.LocalDate;
+
 import com.submithub.ai.AiJudgeProvider;
 import com.submithub.ai.AiJudgeProvider.AiJudgeException;
 import com.submithub.ai.AiJudgeProvider.JudgeRequest;
@@ -62,6 +67,8 @@ public class AiJudgeService {
     private final AssignmentRepository assignments;
     private final AccessService access;
     private final TransactionTemplate tx;
+    private final AiDailyUsageRepository dailyUsages;
+    private final AppProperties appProperties;
     private final ExecutorService executor = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r, "ai-judge");
         t.setDaemon(true);
@@ -70,7 +77,8 @@ public class AiJudgeService {
 
     public AiJudgeService(AiJudgeProvider provider, FeedbackService feedback, AiJudgementRepository judgements,
                           ReviewCommentRepository comments, SubmissionFileRepository files,
-                          AssignmentRepository assignments, AccessService access, PlatformTransactionManager txManager) {
+                          AssignmentRepository assignments, AccessService access, PlatformTransactionManager txManager,
+                          AiDailyUsageRepository dailyUsages, AppProperties appProperties) {
         this.provider = provider;
         this.feedback = feedback;
         this.judgements = judgements;
@@ -79,6 +87,24 @@ public class AiJudgeService {
         this.assignments = assignments;
         this.access = access;
         this.tx = new TransactionTemplate(txManager);
+        this.dailyUsages = dailyUsages;
+        this.appProperties = appProperties;
+    }
+
+    private boolean checkAndIncrementDailyLimit() {
+        int limit = (appProperties != null && appProperties.ai() != null)
+                ? appProperties.ai().dailyLimit() : 100;
+        return Boolean.TRUE.equals(tx.execute(status -> {
+            LocalDate today = LocalDate.now();
+            AiDailyUsage usage = dailyUsages.findById(today)
+                    .orElseGet(() -> dailyUsages.save(new AiDailyUsage(today, 0)));
+            if (usage.getCallCount() >= limit) {
+                return false;
+            }
+            usage.increment();
+            dailyUsages.save(usage);
+            return true;
+        }));
     }
 
     @PreDestroy
@@ -154,13 +180,17 @@ public class AiJudgeService {
         int done = 0;
         for (Task t : tasks) {
             JudgeResult result;
-            try {
-                result = provider.judge(t.request());
-            } catch (AiJudgeException e) {
-                result = new JudgeResult(AiVerdict.FAILED, e.getMessage(), null);
-            } catch (RuntimeException e) {
-                log.warn("AI 판정 예외", e);
-                result = new JudgeResult(AiVerdict.FAILED, "AI 판정 중 오류가 발생했습니다.", null);
+            if (!checkAndIncrementDailyLimit()) {
+                result = new JudgeResult(AiVerdict.FAILED, "오늘 AI 판정 한도 초과", null);
+            } else {
+                try {
+                    result = provider.judge(t.request());
+                } catch (AiJudgeException e) {
+                    result = new JudgeResult(AiVerdict.FAILED, e.getMessage(), null);
+                } catch (RuntimeException e) {
+                    log.warn("AI 판정 예외", e);
+                    result = new JudgeResult(AiVerdict.FAILED, "AI 판정 중 오류가 발생했습니다.", null);
+                }
             }
             save(t, result);
             done++;

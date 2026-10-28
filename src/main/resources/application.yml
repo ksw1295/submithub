@@ -42,3 +42,18 @@ submithub:
 
   diff:
     max-edit-distance: 5000
+
+  rate-limit:
+    login-per-minute: 10
+    submit-per-minute: 5
+    ai-judge-per-minute: 3
+    trusted-proxies:
+      - 127.0.0.1
+      - 0:0:0:0:0:0:0:1
+      - ::1
+
+  ai:
+    daily-limit: 100
+
+  demo:
+    reset-cron: ""

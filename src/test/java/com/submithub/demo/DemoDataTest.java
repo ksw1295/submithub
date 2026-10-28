@@ -46,12 +46,12 @@ class DemoDataTest {
 
     @Test
     void 계정이_만들어지고_비밀번호는_BCrypt_이다() {
-        assertThat(users.count()).isEqualTo(8);
+        assertThat(users.count()).isEqualTo(20);
         User p = users.findByLoginId(DemoDataLoader.PROFESSOR_ID).orElseThrow();
         assertThat(p.isProfessor()).isTrue();
         assertThat(p.getPasswordHash()).startsWith("$2");
         assertThat(encoder.matches(DemoDataLoader.PROFESSOR_PASSWORD, p.getPasswordHash())).isTrue();
-        for (int i = 1; i <= 7; i++) {
+        for (int i = 1; i <= 17; i++) {
             User s = users.findByLoginId("student" + i).orElseThrow();
             assertThat(encoder.matches(DemoDataLoader.STUDENT_PASSWORD, s.getPasswordHash())).isTrue();
         }

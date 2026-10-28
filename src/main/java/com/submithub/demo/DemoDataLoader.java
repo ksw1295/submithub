@@ -120,6 +120,16 @@ public class DemoDataLoader implements ApplicationRunner {
             students.add(users.save(new User("student" + (i + 1), encoder.encode(STUDENT_PASSWORD),
                     DemoCode.NAMES.get(i), Role.STUDENT, "2026" + String.format("%04d", 1001 + i), "컴퓨터공학과")));
         }
+        List<String> extraNames = List.of(
+                "송민서", "임도현", "오지민", "류현우", "서예은",
+                "황시우", "배채원", "유진호", "권소율", "조태양"
+        );
+        List<User> extraStudents = new ArrayList<>();
+        for (int i = 0; i < extraNames.size(); i++) {
+            extraStudents.add(users.save(new User("student" + (DemoCode.NAMES.size() + i + 1),
+                    encoder.encode(STUDENT_PASSWORD),
+                    extraNames.get(i), Role.STUDENT, "2026" + String.format("%04d", 1001 + DemoCode.NAMES.size() + i), "컴퓨터공학과")));
+        }
         Course course = courses.save(new Course(prof, "자료구조", "2026-2", INVITE_CODE));
         for (User s : students) {
             enrollments.save(new Enrollment(course, s));
@@ -213,6 +223,54 @@ public class DemoDataLoader implements ApplicationRunner {
 
         // 표절 검사를 한 번 실행해 둔다 (시연 때 바로 결과를 볼 수 있도록)
         similarity.run(a1.getId(), SimilarityService.DEFAULT_THRESHOLD, new AppUser(prof));
+
+        // ---- 추가 교수진 및 강의 데이터 ----
+        // 1) 김교수 추가 강의: 알고리즘 및 실습
+        Course courseAlgo = courses.save(new Course(prof, "알고리즘 및 실습", "2026-2", "ALGO2026"));
+        for (int i = 0; i < 5; i++) {
+            enrollments.save(new Enrollment(courseAlgo, students.get(i)));
+        }
+        for (int i = 0; i < 5; i++) {
+            enrollments.save(new Enrollment(courseAlgo, extraStudents.get(i)));
+        }
+        assignments.save(new Assignment(courseAlgo, "과제 1: 최단 경로 다익스트라(Dijkstra) 알고리즘",
+                "주어진 가중치 방향 그래프에서 시작 정점부터 모든 정점까지의 최단 거리를 구하세요.",
+                now.plusDays(7).withHour(23).withMinute(59).withSecond(0).withNano(0),
+                true, now.plusDays(14).toLocalDate().atTime(23, 59), null));
+
+        // 2) 김교수 추가 강의: 객체지향 설계 (지난 학기)
+        Course courseOop = courses.save(new Course(prof, "객체지향 설계와 디자인패턴", "2026-1", "OOD2026"));
+        for (User s : students) {
+            enrollments.save(new Enrollment(courseOop, s));
+        }
+        assignments.save(new Assignment(courseOop, "과제 1: 전략 패턴을 활용한 결제 모듈 설계",
+                "인터페이스 기반 Strategy Pattern을 적용하여 다양한 결제 수단을 유연하게 처리하는 구조를 작성하세요.",
+                now.minusMonths(3).withHour(23).withMinute(59).withSecond(0).withNano(0),
+                false, null, null));
+
+        // 3) 추가 교수 1: 이교수 (인공지능학과)
+        User prof2 = users.save(new User("prof2", encoder.encode(PROFESSOR_PASSWORD), "이교수",
+                Role.PROFESSOR, null, "인공지능학과"));
+        Course courseAi = courses.save(new Course(prof2, "인공지능 및 기계학습", "2026-2", "AI2026"));
+        for (int i : List.of(0, 2, 3, 5)) {
+            enrollments.save(new Enrollment(courseAi, students.get(i)));
+        }
+        assignments.save(new Assignment(courseAi, "과제 1: 경사 하강법 선형 회귀 모델 구현",
+                "Numpy만을 활용하여 단변량 선형 회귀 모델 및 가중치 업데이트 손실 함수를 구현하세요.",
+                now.plusDays(10).withHour(23).withMinute(59).withSecond(0).withNano(0),
+                true, now.plusDays(17).toLocalDate().atTime(23, 59), null));
+
+        // 4) 추가 교수 2: 박교수 (소프트웨어학부)
+        User prof3 = users.save(new User("prof3", encoder.encode(PROFESSOR_PASSWORD), "박교수",
+                Role.PROFESSOR, null, "소프트웨어학부"));
+        Course courseWeb = courses.save(new Course(prof3, "웹 백엔드 아키텍처", "2026-2", "WEB2026"));
+        for (int i : List.of(1, 4, 6)) {
+            enrollments.save(new Enrollment(courseWeb, students.get(i)));
+        }
+        assignments.save(new Assignment(courseWeb, "과제 1: REST API 엔드포인트 및 인증 필터 구현",
+                "RESTful 원칙에 부합하는 리소스 URI 및 Spring Security 인증 필터 체인을 설계하세요.",
+                now.plusDays(12).withHour(23).withMinute(59).withSecond(0).withNano(0),
+                false, null, null));
     }
 
     // ---------- helpers ----------

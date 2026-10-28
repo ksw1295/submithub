@@ -1,0 +1,124 @@
+# SubmitHub Production Compose
+# 실행 전 필수:
+#   cp .env.example .env
+#   .env 의 DOMAIN, DB_PASSWORD, PROFESSOR_SIGNUP_CODE 등 필수 값 입력
+# 실행:
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: submithub
+      MARIADB_USER: ${DB_USER:?.env 에 DB_USER 를 설정하세요}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?.env 에 DB_PASSWORD 를 설정하세요}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?.env 에 DB_ROOT_PASSWORD 를 설정하세요}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # 채점용 컨테이너 실행(docker run, docker rm)에 필요한 API만 최소 허용
+      - CONTAINERS=1
+      - POST=1
+      - INFO=1
+      - VERSION=1
+      - PING=1
+      # 위험하거나 불필요한 Docker API 차단
+      - BUILD=0
+      - COMMIT=0
+      - CONFIGS=0
+      - DISTRIBUTION=0
+      - EXEC=0
+      - IMAGES=0
+      - NETWORKS=0
+      - NODES=0
+      - PLUGINS=0
+      - SERVICES=0
+      - SESSION=0
+      - SWARM=0
+      - SYSTEM=0
+      - TASKS=0
+      - VOLUMES=0
+      - SECRETS=0
+    networks:
+      - internal
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      socket-proxy:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: mariadb,prod
+      DB_URL: jdbc:mariadb://db:3306/submithub
+      DB_USER: ${DB_USER:?.env 에 DB_USER 를 설정하세요}
+      DB_PASSWORD: ${DB_PASSWORD:?.env 에 DB_PASSWORD 를 설정하세요}
+      PROFESSOR_SIGNUP_CODE: ${PROFESSOR_SIGNUP_CODE:?.env 에 PROFESSOR_SIGNUP_CODE 를 설정하세요}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DEMO_DATA: ${DEMO_DATA:-false}
+      SUBMITHUB_STORAGE_DIR: /app/uploads
+      SUBMITHUB_RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN:-10}
+      SUBMITHUB_RATE_LIMIT_SUBMIT_PER_MINUTE: ${RATE_LIMIT_SUBMIT:-5}
+      SUBMITHUB_RATE_LIMIT_AI_JUDGE_PER_MINUTE: ${RATE_LIMIT_AI_JUDGE:-3}
+      SUBMITHUB_AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
+      SUBMITHUB_DEMO_RESET_CRON: ${DEMO_RESET_CRON:-}
+      # 도커 소켓 직접 마운트 대신 socket-proxy 를 통해 제한된 Docker API 만 사용
+      DOCKER_HOST: tcp://socket-proxy:2375
+    volumes:
+      - uploads:/app/uploads
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?.env 에 DOMAIN 을 설정하세요}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  db-data:
+  uploads:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal:

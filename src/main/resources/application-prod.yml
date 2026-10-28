@@ -31,3 +31,14 @@ logging:
     rollingpolicy:
       file-name-pattern: logs/submithub-%d{yyyy-MM-dd}.%i.log
       max-history: 14
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+

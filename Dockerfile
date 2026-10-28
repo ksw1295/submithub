@@ -9,6 +9,8 @@ RUN mvn -B -q package -DskipTests
 # 2단계: 실행 이미지
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+COPY --from=docker:cli /usr/local/bin/docker /usr/local/bin/docker
 RUN useradd --system --create-home submithub && mkdir -p /app/uploads && chown -R submithub /app
 COPY --from=build /build/target/submithub-*.jar /app/app.jar
 USER submithub

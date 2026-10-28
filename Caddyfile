@@ -1,0 +1,35 @@
+# SubmitHub Production Caddyfile
+# Caddy가 {$DOMAIN} 도메인으로 Let's Encrypt / ZeroSSL 인증서를 자동 발급받습니다.
+
+{$DOMAIN} {
+    # /actuator/* 경로 중 /actuator/health 외의 모든 내부 모니터링 주소는 외부 접근 차단
+    @actuator_blocked {
+        path /actuator/*
+        not path /actuator/health
+    }
+    respond @actuator_blocked 403
+
+    # Spring Boot 앱으로 역방향 프록시
+    # Spring Boot Actuator의 show-details: never 설정과 함께 /actuator/health 는 status 만 노출됨
+    reverse_proxy app:8080 {
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # 압축 전송 (Zstandard, Gzip)
+    encode zstd gzip
+
+    # 보안 헤더
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # 표준 로그
+    log {
+        output stdout
+        format console
+    }
+}

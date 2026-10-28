@@ -4,6 +4,7 @@ import com.submithub.AppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
  * submithub.demo.reset-cron 설정이 켜져 있을 때 정해진 시각에 초기화를 실행한다.
  */
 @Component
+@ConditionalOnExpression("!'${submithub.demo.reset-cron:}'.isBlank() && !'${submithub.demo.reset-cron:}'.equals('-')")
 public class DemoDataResetScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataResetScheduler.class);

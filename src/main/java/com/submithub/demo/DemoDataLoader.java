@@ -5,6 +5,10 @@ import com.submithub.domain.GradingRunRepository;
 import com.submithub.domain.SimilarityPairRepository;
 import com.submithub.domain.SimilarityRunRepository;
 import com.submithub.domain.SubmissionFileRepository;
+import com.submithub.domain.Team;
+import com.submithub.domain.TeamMember;
+import com.submithub.domain.TeamRepository;
+import com.submithub.domain.TeamMemberRepository;
 
 import com.submithub.domain.Assignment;
 import com.submithub.domain.AssignmentRepository;
@@ -86,6 +90,8 @@ public class DemoDataLoader implements ApplicationRunner {
     private final SimilarityRunRepository similarityRuns;
     private final GradingRunRepository gradingRuns;
     private final SubmissionFileRepository files;
+    private final TeamRepository teams;
+    private final TeamMemberRepository teamMembers;
     private final Object resetLock = new Object();
     /** 과제 1 의 제출 ID 들 (시드가 커밋된 뒤 자동 채점을 요청한다) */
     private final List<Long> gradedSubmissionIds = new ArrayList<>();
@@ -98,7 +104,7 @@ public class DemoDataLoader implements ApplicationRunner {
                           GradingService grading, PlatformTransactionManager txm,
                           AiJudgementRepository judgements, SimilarityPairRepository similarityPairs,
                           SimilarityRunRepository similarityRuns, GradingRunRepository gradingRuns,
-                          SubmissionFileRepository files) {
+                          SubmissionFileRepository files, TeamRepository teams, TeamMemberRepository teamMembers) {
         this.users = users;
         this.courses = courses;
         this.enrollments = enrollments;
@@ -118,6 +124,8 @@ public class DemoDataLoader implements ApplicationRunner {
         this.similarityRuns = similarityRuns;
         this.gradingRuns = gradingRuns;
         this.files = files;
+        this.teams = teams;
+        this.teamMembers = teamMembers;
     }
 
     /**
@@ -128,6 +136,8 @@ public class DemoDataLoader implements ApplicationRunner {
         synchronized (resetLock) {
             log.info("시연 데이터 초기화 시작...");
             tx.executeWithoutResult(status -> {
+                teamMembers.deleteAllInBatch();
+                teams.deleteAllInBatch();
                 judgements.deleteAllInBatch();
                 similarityPairs.deleteAllInBatch();
                 similarityRuns.deleteAllInBatch();
@@ -309,7 +319,8 @@ public class DemoDataLoader implements ApplicationRunner {
         Assignment aAi = assignments.save(new Assignment(courseAi, "과제 1: 대학 규정 질의응답 RAG 챗봇 시스템 구축",
                 "대학 공개 규정(학칙, 장학 규정 등) 문서를 기반으로 학생 질의에 정확히 답변하는 RAG(검색 증강 생성) 챗봇을 구현하세요.\n- 벡터 검색(ChromaDB) 및 KURE-v1 임베딩 적용\n- LLM(Gemini) 연동 및 출처(근거 조항) 표기\n- Streamlit 기반 웹 인터페이스 구현",
                 now.plusDays(10).withHour(23).withMinute(59).withSecond(0).withNano(0),
-                true, now.plusDays(17).toLocalDate().atTime(23, 59), null));
+                true, now.plusDays(17).toLocalDate().atTime(23, 59), null,
+                true, 4));
 
         // 이민준(student1) 1차 제출 (banjung-v1)
         Submission ragV1 = submit(aAi, s1, 1, "1차 제출: 대학 규정 RAG 챗봇 기본 파이프라인 구현",
@@ -349,6 +360,19 @@ public class DemoDataLoader implements ApplicationRunner {
                         "src/llm.py", DemoCode.RAG_V2_LLM,
                         "src/common.py", DemoCode.RAG_V2_COMMON,
                         "README.md", DemoCode.RAG_README));
+
+        // ---- 조별 과제 (팀 프로젝트) 및 브랜치 매핑 구성 ----
+        Team team1 = teams.save(new Team(aAi, "1조 - 대학 RAG 챗봇팀", "ksw1295/univ-rag-chatbot", s1));
+        teamMembers.save(new TeamMember(team1, s1, "feature/rag-pipeline", "AI 엔진 & RAG 파이프라인 (팀장)"));
+        teamMembers.save(new TeamMember(team1, s3, "feature/streamlit-ui", "Streamlit 웹 대시보드 인터페이스"));
+        teamMembers.save(new TeamMember(team1, s4, "feature/rest-api", "FastAPI 규정 검색 API 서버"));
+
+        // 최지호(student3) 1차 제출
+        Submission ragS3 = submit(aAi, s3, 1, "1차 제출: 대학 규정 질의응답 웹 인터페이스",
+                at(now, -1, 20, 0),
+                "ksw1295/univ-rag-chatbot", "7953452f1437bb96f86236b28dd4f19b16ea9825",
+                files("src/ask.py", DemoCode.disguised(DemoCode.RAG_V1_ASK), "README.md", DemoCode.RAG_README));
+        grade(ragS3, prof2, 85, "UI 레이아웃이 깔끔하고 질문/답변 흐름이 직관적입니다.");
 
         // 4) 추가 교수 2: 박교수 (소프트웨어학부)
         User prof3 = users.save(new User("prof3", encoder.encode(PROFESSOR_PASSWORD), "박교수",

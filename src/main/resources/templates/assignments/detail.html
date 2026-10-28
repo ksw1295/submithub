@@ -11,6 +11,9 @@
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <h1 class="h3 mb-0" th:text="${assignment.title}">과제</h1>
         <div sec:authorize="hasRole('PROFESSOR')" class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary btn-sm" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">
+                <span>조별 과제 / 팀 관리</span>
+            </a>
             <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/grading(id=${assignment.id})}">
                 <span>자동 채점</span>
                 <span class="badge" th:classappend="${autoGrading} ? 'text-bg-success' : 'text-bg-secondary'" th:text="${autoGrading} ? '사용 중' : '꺼짐'">꺼짐</span>
@@ -40,8 +43,23 @@
                     <dd class="col-sm-10 mb-1" th:if="${autoGrading}">제출할 때마다 자동으로 채점됩니다. 결과는 제출 화면과 제출 이력에서 볼 수 있습니다.</dd>
                     <dt class="col-sm-2" sec:authorize="hasRole('PROFESSOR')">뼈대 코드</dt>
                     <dd class="col-sm-10 mb-0" sec:authorize="hasRole('PROFESSOR')" th:text="${assignment.hasBaseline} ? '등록됨 (표절 검사에서 제외)' : '없음'">없음</dd>
+                    <dt class="col-sm-2" th:if="${assignment.teamProject}">과제 유형</dt>
+                    <dd class="col-sm-10 mb-0" th:if="${assignment.teamProject}">
+                        <span class="badge text-bg-primary">조별(팀) 프로젝트</span>
+                        <a class="ms-2 btn btn-link btn-sm p-0 text-decoration-none" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 목록 및 브랜치 기여도 &rarr;</a>
+                    </dd>
                 </dl>
             </div>
+        </div>
+    </div>
+
+    <!-- 학생: 조별 과제 안내 -->
+    <div sec:authorize="hasRole('STUDENT')" class="mb-4" th:if="${assignment.teamProject}">
+        <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong>👥 조별(팀) 프로젝트 과제입니다.</strong> 팀을 만들거나 참여하고 담당 브랜치를 등록하여 기여도를 추적하세요.
+            </div>
+            <a class="btn btn-primary btn-sm" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 현황 및 브랜치 관리 &rarr;</a>
         </div>
     </div>
 

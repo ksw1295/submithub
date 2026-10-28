@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html th:replace="~{layout :: layout(~{::title}, ~{::main})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title th:text="${team.name} + ' - 브랜치 기여도 감사'">팀 브랜치 기여도 감사</title></head>
+<body>
+<main>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a th:href="@{/courses}">내 강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/courses/{id}(id=${course.id})}" th:text="${course.name}">강의</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}(id=${assignment.id})}" th:text="${assignment.title}">과제</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 목록</a></li>
+        <li class="breadcrumb-item active" th:text="${team.name} + ' 기여도 감사'">기여도 감사</li>
+    </ol></nav>
+
+    <!-- 상단 팀 요약 헤더 -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="h3 mb-0" th:text="${team.name}">1조 - RAG 챗봇팀</h1>
+                <span class="badge" th:classappend="${report.collaborationClass}" th:text="${report.collaborationStatus}">협업 상태</span>
+            </div>
+            <p class="text-muted mb-0">
+                <span th:text="${assignment.title}">과제명</span> &bull;
+                GitHub 저장소: 
+                <a th:if="${team.repoUrl != null and !team.repoUrl.isBlank()}" th:href="${team.repoUrl.startsWith('http') ? team.repoUrl : 'https://github.com/' + team.repoUrl}" target="_blank" th:text="${team.repoUrl}">repo</a>
+                <span th:if="${team.repoUrl == null or team.repoUrl.isBlank()}" class="text-muted">미등록</span>
+            </p>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">&larr; 팀 목록으로</a>
+        </div>
+    </div>
+
+    <!-- 협업 건전성 알림 카드 -->
+    <div class="alert shadow-sm mb-4" th:classappend="${report.collaborationClass == 'badge-warning'} ? 'alert-warning border-warning' : 'alert-success border-success'">
+        <div class="d-flex align-items-center gap-2">
+            <strong th:text="${report.collaborationStatus}">상태</strong> &mdash; 
+            <span th:text="${report.collaborationSummary}">요약 설명</span>
+        </div>
+    </div>
+
+    <!-- 통계 카드 3개 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center py-3">
+                <div class="text-muted small">팀 총 유효 코드 (LoC)</div>
+                <div class="h2 mb-0 fw-bold text-primary" th:text="${#numbers.formatInteger(report.totalValidCodeLines, 1, 'COMMA')} + ' 줄'">0 줄</div>
+                <div class="text-muted small mt-1">주석/공백 제외 순수 로직</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center py-3">
+                <div class="text-muted small">평균 피드백 반영률</div>
+                <div class="h2 mb-0 fw-bold" th:classappend="${report.avgFeedbackRate >= 80 ? 'text-success' : (report.avgFeedbackRate >= 50 ? 'text-warning' : 'text-danger')}"
+                     th:text="${report.avgFeedbackRate >= 0 ? report.avgFeedbackRate + '%' : '-'}">-</div>
+                <div class="text-muted small mt-1">교수 리뷰 개선 해결 지수</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center py-3">
+                <div class="text-muted small">등록된 팀원 수</div>
+                <div class="h2 mb-0 fw-bold text-dark" th:text="${report.memberCount} + ' 명'">0 명</div>
+                <div class="text-muted small mt-1">각 브랜치별 작업 매핑됨</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 차트 영역 (Chart.js) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">📊 팀원별 실질 유효 코드 점유율 (%)</div>
+                <div class="card-body d-flex justify-content-center align-items-center" style="position: relative; min-height: 250px;">
+                    <canvas id="contributionChart" style="max-height: 230px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">📈 팀원별 피드백 반영률 vs 코드 라인 수</div>
+                <div class="card-body d-flex justify-content-center align-items-center" style="position: relative; min-height: 250px;">
+                    <canvas id="feedbackChart" style="max-height: 230px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 팀원별 상세 감사 테이블 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>팀원별 브랜치 기여도 및 감사 결과 (Audit Details)</strong>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>팀원</th>
+                    <th>담당 역할</th>
+                    <th>담당 브랜치</th>
+                    <th class="text-center">제출 버전</th>
+                    <th class="text-end">유효 라인(LoC)</th>
+                    <th class="text-end">기여율</th>
+                    <th class="text-center">피드백 반영률</th>
+                    <th class="text-center">기여 판정</th>
+                    <th class="text-end">코드 확인</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${report.members}">
+                    <td>
+                        <strong th:text="${m.studentName}">이민준</strong>
+                        <span th:if="${m.leader}" class="badge bg-primary ms-1">팀장</span>
+                        <div class="text-muted small" th:text="${m.studentNum}">20261001</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border" th:text="${m.roleTitle}">AI 엔진</span>
+                    </td>
+                    <td>
+                        <code th:text="${m.branchName}">feature/rag</code>
+                        <div th:if="${m.latestCommitSha != null}" class="text-muted small">
+                            <span th:text="${#strings.substring(m.latestCommitSha, 0, 7)}">sha</span>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${m.versionCount > 0}" class="badge bg-secondary" th:text="'v' + ${m.versionCount}">v2</span>
+                        <span th:if="${m.versionCount == 0}" class="text-muted">-</span>
+                    </td>
+                    <td class="text-end fw-semibold" th:text="${#numbers.formatInteger(m.validCodeLines, 1, 'COMMA')} + ' 줄'">0 줄</td>
+                    <td class="text-end">
+                        <span class="fw-bold" th:text="${m.contributionPercent} + '%'">0%</span>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar" role="progressbar" th:style="'width: ' + ${m.contributionPercent} + '%'"></div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${m.feedbackRatePercent >= 0}" class="badge" th:classappend="${m.feedbackRatePercent == 100 ? 'text-bg-success' : 'text-bg-info'}"
+                              th:text="${m.feedbackRatePercent} + '% (' + ${m.feedbackTotal - m.feedbackRemaining} + '/' + ${m.feedbackTotal} + ')'">100%</span>
+                        <span th:if="${m.feedbackRatePercent < 0}" class="text-muted small">리뷰 없음</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge" th:classappend="${m.healthBadgeClass}" th:text="${m.healthBadge}">정상 기여</span>
+                    </td>
+                    <td class="text-end">
+                        <a th:if="${m.latestSubmissionId != null}" class="btn btn-outline-primary btn-sm" th:href="@{/submissions/{id}(id=${m.latestSubmissionId})}">
+                            코드 보기 &rarr;
+                        </a>
+                        <span th:if="${m.latestSubmissionId == null}" class="text-muted small">제출물 없음</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Chart.js 스크립트 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const membersData = /*[[${report.members}]]*/ [];
+        
+        const labels = membersData.map(m => m.studentName);
+        const contribPercents = membersData.map(m => m.contributionPercent);
+        const codeLines = membersData.map(m => m.validCodeLines);
+        const feedbackRates = membersData.map(m => m.feedbackRatePercent >= 0 ? m.feedbackRatePercent : 0);
+
+        // 1. 도넛 차트 (기여율)
+        const ctxContrib = document.getElementById('contributionChart').getContext('2d');
+        new Chart(ctxContrib, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: contribPercents,
+                    backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#64748b']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${context.raw}% (${codeLines[context.dataIndex]} 줄)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 2. 바 차트 (피드백 반영률)
+        const ctxFeedback = document.getElementById('feedbackChart').getContext('2d');
+        new Chart(ctxFeedback, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '피드백 반영률 (%)',
+                    data: feedbackRates,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { callback: v => v + '%' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+        /*]]>*/
+    </script>
+</main>
+</body>
+</html>

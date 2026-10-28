@@ -42,14 +42,35 @@ public class Assignment {
     @Column(name = "baseline_code", columnDefinition = "LONGTEXT")
     private String baselineCode;
 
+    /** 조별(팀) 프로젝트 여부 */
+    @Column(name = "team_project", nullable = false, columnDefinition = "boolean default false")
+    private boolean teamProject;
+
+    /** 최대 팀 인원 수 (null 이면 무제한) */
+    @Column(name = "max_team_size")
+    private Integer maxTeamSize;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     public Assignment(Course course, String title, String description, LocalDateTime dueAt,
                       boolean allowLate, LocalDateTime lateUntil, String baselineCode) {
+        this(course, title, description, dueAt, allowLate, lateUntil, baselineCode, false, null);
+    }
+
+    public Assignment(Course course, String title, String description, LocalDateTime dueAt,
+                      boolean allowLate, LocalDateTime lateUntil, String baselineCode,
+                      boolean teamProject, Integer maxTeamSize) {
         this.course = course;
         this.createdAt = LocalDateTime.now();
+        this.teamProject = teamProject;
+        this.maxTeamSize = maxTeamSize;
         update(title, description, dueAt, allowLate, lateUntil, baselineCode);
+    }
+
+    public void configureTeam(boolean teamProject, Integer maxTeamSize) {
+        this.teamProject = teamProject;
+        this.maxTeamSize = maxTeamSize;
     }
 
     public void update(String title, String description, LocalDateTime dueAt,

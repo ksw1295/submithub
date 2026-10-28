@@ -204,6 +204,51 @@ class DemoDataTest {
         assertThat(history.versions().get(0).sourceLabel()).contains("fa3aa03");
     }
 
+    @Autowired com.submithub.service.TeamService teamService;
+    @Autowired com.submithub.service.TeamAuditService teamAuditService;
+
+    @Test
+    void 인공지능_강의의_조별과제_팀과_브랜치_감사_리포트가_정상적으로_산출된다() {
+        var prof2 = new AppUser(users.findByLoginId("prof2").orElseThrow());
+        var aiCourse = assignments.findAll().stream()
+                .filter(a -> a.getTitle().contains("대학 규정 질의응답 RAG 챗봇"))
+                .findFirst().orElseThrow();
+
+        assertThat(aiCourse.isTeamProject()).isTrue();
+        assertThat(aiCourse.getMaxTeamSize()).isEqualTo(4);
+
+        var teams = teamService.getTeams(aiCourse.getId());
+        assertThat(teams).hasSize(1);
+
+        var team = teams.get(0);
+        assertThat(team.getName()).contains("1조");
+        assertThat(team.getRepoUrl()).isEqualTo("ksw1295/univ-rag-chatbot");
+        assertThat(team.getMembers()).hasSize(3);
+
+        var report = teamAuditService.auditTeam(team.getId(), prof2);
+        assertThat(report.totalValidCodeLines()).isGreaterThan(100);
+        assertThat(report.members()).hasSize(3);
+
+        // 팀장 이민준 (핵심 주도 기여, 2회 제출, 100% 반영률)
+        var s1Audit = report.members().stream().filter(m -> m.loginId().equals("student1")).findFirst().orElseThrow();
+        assertThat(s1Audit.leader()).isTrue();
+        assertThat(s1Audit.branchName()).isEqualTo("feature/rag-pipeline");
+        assertThat(s1Audit.versionCount()).isEqualTo(2);
+        assertThat(s1Audit.feedbackRatePercent()).isEqualTo(100);
+        assertThat(s1Audit.contributionPercent()).isGreaterThan(30);
+
+        // 최지호 (정상 균형 기여, 1회 제출)
+        var s3Audit = report.members().stream().filter(m -> m.loginId().equals("student3")).findFirst().orElseThrow();
+        assertThat(s3Audit.branchName()).isEqualTo("feature/streamlit-ui");
+        assertThat(s3Audit.versionCount()).isEqualTo(1);
+        assertThat(s3Audit.score()).isEqualTo(85);
+
+        // 정하은 (미제출 상태 - 활동 없음 감지)
+        var s4Audit = report.members().stream().filter(m -> m.loginId().equals("student4")).findFirst().orElseThrow();
+        assertThat(s4Audit.versionCount()).isEqualTo(0);
+        assertThat(s4Audit.healthBadge()).contains("미제출");
+    }
+
     private Long a1Id() {
         return statsService.course(1L, prof()).assignments().get(0).id();
     }

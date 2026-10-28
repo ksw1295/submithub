@@ -292,4 +292,23 @@ class PagesRenderTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/courses"));
     }
+
+    @Autowired com.submithub.service.TeamService teamService;
+
+    @Test
+    void 조별_과제_팀_목록과_기여도_감사_화면이_정상_렌더링된다() throws Exception {
+        // 교수, 학생 둘 다 팀 목록 접근 가능
+        mvc.perform(get("/assignments/" + assignment.getId() + "/teams").with(user(prof)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("조별 과제 / 팀 관리")));
+
+        // 학생이 팀 생성
+        com.submithub.domain.Team team = teamService.createTeam(assignment.getId(), "테스트조", "owner/repo", stu.getId(), "main", "팀장");
+
+        // 팀 감사(Audit) 화면 렌더링
+        mvc.perform(get("/teams/" + team.getId() + "/audit").with(user(prof)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("브랜치 기여도 감사")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("팀원별 실질 유효 코드 점유율")));
+    }
 }

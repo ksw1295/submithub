@@ -48,7 +48,12 @@ public class AssignmentService {
     /** 과제 상세 화면용 */
     public record AssignmentView(Long id, Long courseId, String courseName, String title, String description,
                                  LocalDateTime dueAt, boolean allowLate, LocalDateTime lateUntil,
-                                 boolean hasBaseline, boolean open, boolean pastDue) {
+                                 boolean hasBaseline, boolean open, boolean pastDue, boolean teamProject) {
+    }
+
+    @Transactional(readOnly = true)
+    public Assignment getAssignment(Long assignmentId, AppUser user) {
+        return access.assignment(assignmentId, user);
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +62,7 @@ public class AssignmentService {
         LocalDateTime now = LocalDateTime.now();
         return new AssignmentView(a.getId(), a.getCourse().getId(), a.getCourse().getName(), a.getTitle(),
                 a.getDescription(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(),
-                a.getBaselineCode() != null, a.isOpen(now), a.isPastDue(now));
+                a.getBaselineCode() != null, a.isOpen(now), a.isPastDue(now), a.isTeamProject());
     }
 
     @Transactional(readOnly = true)

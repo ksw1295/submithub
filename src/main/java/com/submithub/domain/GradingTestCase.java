@@ -24,11 +24,11 @@ public class GradingTestCase {
     private String name;
 
     @Lob
-    @Column(name = "input_text")
+    @Column(name = "input_text", columnDefinition = "LONGTEXT")
     private String input;
 
     @Lob
-    @Column(name = "expected_output")
+    @Column(name = "expected_output", columnDefinition = "LONGTEXT")
     private String expectedOutput;
 
     @Column(name = "public_case", nullable = false)

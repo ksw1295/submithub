@@ -179,6 +179,31 @@ class DemoDataTest {
         }
     }
 
+    @Test
+    void 인공지능_강의의_대학_RAG_챗봇_과제는_피드백_반영률이_100퍼센트이다() {
+        var prof2 = new AppUser(users.findByLoginId("prof2").orElseThrow());
+        var student1 = student(1);
+        var aiCourse = assignments.findAll().stream()
+                .filter(a -> a.getTitle().contains("대학 규정 질의응답 RAG 챗봇"))
+                .findFirst().orElseThrow();
+
+        var fb = feedbackService.forStudent(aiCourse.getId(), student1.getId(), prof2);
+        assertThat(fb.summary().total()).isEqualTo(3);
+        assertThat(fb.summary().modified()).isEqualTo(2);
+        assertThat(fb.summary().deleted()).isEqualTo(1);
+        assertThat(fb.summary().ratePercent()).isEqualTo(100);
+        assertThat(fb.summary().remaining()).isEqualTo(0);
+
+        var history = submissionService.history(aiCourse.getId(), student1.getId(), prof2);
+        assertThat(history.versions()).hasSize(2);
+        // v1 (78점, banjung-v1: 커밋 804a610)
+        assertThat(history.versions().get(1).score()).isEqualTo(78);
+        assertThat(history.versions().get(1).sourceLabel()).contains("804a610");
+        assertThat(history.versions().get(1).sourceUrl()).contains("univ-rag-chatbot");
+        // v2 (code-review-v1: 커밋 fa3aa03)
+        assertThat(history.versions().get(0).sourceLabel()).contains("fa3aa03");
+    }
+
     private Long a1Id() {
         return statsService.course(1L, prof()).assignments().get(0).id();
     }

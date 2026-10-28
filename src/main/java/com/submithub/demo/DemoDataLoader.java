@@ -306,10 +306,49 @@ public class DemoDataLoader implements ApplicationRunner {
         for (int i : List.of(0, 2, 3, 5)) {
             enrollments.save(new Enrollment(courseAi, students.get(i)));
         }
-        assignments.save(new Assignment(courseAi, "과제 1: 경사 하강법 선형 회귀 모델 구현",
-                "Numpy만을 활용하여 단변량 선형 회귀 모델 및 가중치 업데이트 손실 함수를 구현하세요.",
+        Assignment aAi = assignments.save(new Assignment(courseAi, "과제 1: 대학 규정 질의응답 RAG 챗봇 시스템 구축",
+                "대학 공개 규정(학칙, 장학 규정 등) 문서를 기반으로 학생 질의에 정확히 답변하는 RAG(검색 증강 생성) 챗봇을 구현하세요.\n- 벡터 검색(ChromaDB) 및 KURE-v1 임베딩 적용\n- LLM(Gemini) 연동 및 출처(근거 조항) 표기\n- Streamlit 기반 웹 인터페이스 구현",
                 now.plusDays(10).withHour(23).withMinute(59).withSecond(0).withNano(0),
                 true, now.plusDays(17).toLocalDate().atTime(23, 59), null));
+
+        // 이민준(student1) 1차 제출 (banjung-v1)
+        Submission ragV1 = submit(aAi, s1, 1, "1차 제출: 대학 규정 RAG 챗봇 기본 파이프라인 구현",
+                at(now, -2, 14, 0),
+                "ksw1295/univ-rag-chatbot", "804a610d40c1a5f101065ae5104af92fe4443736",
+                files("src/ask.py", DemoCode.RAG_V1_ASK,
+                        "src/llm.py", DemoCode.RAG_V1_LLM,
+                        "README.md", DemoCode.RAG_README));
+
+        // 이교수 피드백 3건 등록
+        SubmissionFile fAsk = fileOf(ragV1, "src/ask.py");
+        SubmissionFile fLlm = fileOf(ragV1, "src/llm.py");
+
+        comment(fAsk, prof2,
+                line(S1(DemoCode.RAG_V1_ASK), "CHROMA_PATH = "),
+                line(S1(DemoCode.RAG_V1_ASK), "DISTANCE_THRESHOLD = 0.35"),
+                "로컬 절대 경로(D:\\dev\\...)가 하드코딩되어 있습니다. 환경 변수나 설정 모듈(common.py)을 만들어 분리해 주세요.", null);
+
+        comment(fAsk, prof2,
+                line(S1(DemoCode.RAG_V1_ASK), "client = chromadb.PersistentClient"),
+                line(S1(DemoCode.RAG_V1_ASK), "model = SentenceTransformer"),
+                "질문할 때마다 SentenceTransformer 모델을 다시 로드하면 심각한 지연이 발생합니다. 모델을 싱글톤으로 캐싱하여 재사용하도록 개선하세요.", null);
+
+        comment(fLlm, prof2,
+                line(S1(DemoCode.RAG_V1_LLM), "DEFAULT_MODEL = os.environ.get"), null,
+                "gemini-2.5-flash 대신 무료 지원 기본 모델인 gemini-2.0-flash 로 변경하고 Streamlit Secrets 연동도 지원하도록 보완하세요.", null);
+
+        // 이교수 1차 채점 (78점)
+        grade(ragV1, prof2, 78,
+                "RAG 검색 및 프롬프트 파이프라인은 잘 구현되었습니다. 다만 하드코딩된 경로 제거, 임베딩 모델 캐싱, 그리고 배포 환경(Streamlit Secrets) 연동을 개선해 주면 좋겠습니다.");
+
+        // 이민준(student1) 2차 제출 (code-review-v1: 리뷰 100% 반영)
+        Submission ragV2 = submit(aAi, s1, 2, "2차 제출 (리뷰 반영): common.py 경로 공통화, 모델 싱글톤 캐싱, gemini-2.0-flash 및 Streamlit Secrets 지원",
+                at(now, -1, 17, 30),
+                "ksw1295/univ-rag-chatbot", "fa3aa03e694db87a603315ccf3aca06c999106ee",
+                files("src/ask.py", DemoCode.RAG_V2_ASK,
+                        "src/llm.py", DemoCode.RAG_V2_LLM,
+                        "src/common.py", DemoCode.RAG_V2_COMMON,
+                        "README.md", DemoCode.RAG_README));
 
         // 4) 추가 교수 2: 박교수 (소프트웨어학부)
         User prof3 = users.save(new User("prof3", encoder.encode(PROFESSOR_PASSWORD), "박교수",
@@ -341,7 +380,15 @@ public class DemoDataLoader implements ApplicationRunner {
 
     private Submission submit(Assignment a, User student, int version, String message, LocalDateTime at,
                               Map<String, String> files) {
+        return submit(a, student, version, message, at, null, null, files);
+    }
+
+    private Submission submit(Assignment a, User student, int version, String message, LocalDateTime at,
+                              String sourceRepo, String sourceCommit, Map<String, String> files) {
         Submission s = new Submission(a, student, version, message, at.isAfter(a.getDueAt()), at);
+        if (sourceRepo != null && sourceCommit != null) {
+            s.setSource(sourceRepo, sourceCommit);
+        }
         files.forEach((path, text) -> {
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
             s.addFile(new SubmissionFile(s, path, bytes.length, Hashing.sha256(bytes), "UTF-8", text,

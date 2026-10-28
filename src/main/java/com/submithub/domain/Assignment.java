@@ -39,7 +39,7 @@ public class Assignment {
 
     /** 교수가 나눠준 뼈대 코드. 표절 검사에서 이 부분은 제외한다 */
     @Lob
-    @Column(name = "baseline_code")
+    @Column(name = "baseline_code", columnDefinition = "LONGTEXT")
     private String baselineCode;
 
     @Column(name = "created_at", nullable = false)

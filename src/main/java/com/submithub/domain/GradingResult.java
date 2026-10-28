@@ -44,19 +44,19 @@ public class GradingResult {
     private long durationMs;
 
     @Lob
-    @Column(name = "input_text")
+    @Column(name = "input_text", columnDefinition = "LONGTEXT")
     private String input;
 
     @Lob
-    @Column(name = "expected_output")
+    @Column(name = "expected_output", columnDefinition = "LONGTEXT")
     private String expected;
 
     @Lob
-    @Column(name = "actual_output")
+    @Column(name = "actual_output", columnDefinition = "LONGTEXT")
     private String actual;
 
     @Lob
-    @Column(name = "error_output")
+    @Column(name = "error_output", columnDefinition = "LONGTEXT")
     private String error;
 
     public GradingResult(GradingRun run, String caseName, boolean publicCase, int points, GradingVerdict verdict,

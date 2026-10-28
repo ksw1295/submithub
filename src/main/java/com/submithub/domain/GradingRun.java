@@ -36,7 +36,7 @@ public class GradingRun {
     private Boolean compileOk;
 
     @Lob
-    @Column(name = "compile_message")
+    @Column(name = "compile_message", columnDefinition = "LONGTEXT")
     private String compileMessage;
 
     @Column(nullable = false)

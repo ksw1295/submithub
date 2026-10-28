@@ -37,7 +37,7 @@ public class SubmissionFile {
 
     /** 텍스트 파일의 내용. 바이너리면 null */
     @Lob
-    @Column(name = "content_text", updatable = false)
+    @Column(name = "content_text", updatable = false, columnDefinition = "LONGTEXT")
     private String contentText;
 
     /** 서버 디스크에 저장된 원본 파일 이름 (UUID) */

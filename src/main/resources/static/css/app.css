@@ -924,3 +924,117 @@ table.pair-table tr.matched td.src {
   border-radius: var(--ui-radius-sm);
   padding: 10px 12px;
 }
+
+/* ==========================================================================
+   Landing Page (HOME) Styles
+   ========================================================================== */
+.landing-hero {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  padding: 3.75rem 2rem 3rem;
+  box-shadow: var(--ui-shadow-sm);
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.landing-badge {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  border: 1px solid var(--ui-accent-border);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.landing-title {
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.landing-desc {
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: var(--ui-text-muted);
+}
+
+.landing-stat-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.landing-stat-val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ui-accent);
+  font-family: var(--font-mono);
+}
+
+.landing-stat-label {
+  font-size: 0.82rem;
+  color: var(--ui-text-muted);
+  margin-top: 0.25rem;
+}
+
+.landing-feature-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 1.5rem;
+  height: 100%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.landing-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ui-shadow-sm);
+  border-color: var(--ui-accent-border);
+}
+
+.landing-feature-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  margin-bottom: 1rem;
+}
+
+.landing-step-item {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 1.35rem;
+  height: 100%;
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.landing-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-bottom: 0.85rem;
+}
+
+.landing-cta-card {
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 1px solid var(--ui-accent-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow-sm);
+}

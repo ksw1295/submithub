@@ -273,4 +273,23 @@ class PagesRenderTest {
                 .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("error"));
         assertThat(submissionService.history(assignment.getId(), stu.getId(), stu).versions()).hasSize(3);
     }
+
+    @Test
+    void 비로그인_사용자는_홈_소개화면이_보이고_로그인_사용자는_courses로_이동한다() throws Exception {
+        // 비로그인 방문자: 소개 랜딩 페이지 렌더링
+        mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("과제 관리")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인하고 시작하기")));
+
+        // 별도 분리된 로그인 화면 렌더링
+        mvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인")));
+
+        // 로그인 사용자: 내 강의(/courses)로 리다이렉트
+        mvc.perform(get("/").with(user(prof)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/courses"));
+    }
 }

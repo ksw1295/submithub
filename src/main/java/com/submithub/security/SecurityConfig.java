@@ -31,7 +31,7 @@ public class SecurityConfig {
         http
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/signup", "/webjars/**", "/css/**", "/js/**",
+                        .requestMatchers("/", "/login", "/signup", "/webjars/**", "/css/**", "/js/**",
                                 "/error", "/error/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form

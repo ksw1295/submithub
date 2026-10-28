@@ -5,6 +5,7 @@ import com.submithub.domain.GradingLanguage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -52,9 +53,25 @@ public class DockerGradingRunner implements GradingRunner {
     private volatile long checkedAt;
     private volatile boolean lastAvailable;
 
+    /**
+     * @param workDir 채점 작업 폴더. 비워 두면 업로드 폴더 아래 grading-work. 채점 컨테이너는 Docker 데몬이 이 경로를
+     *                "호스트 기준"으로 마운트하므로, 앱이 컨테이너 안에서 돌 때는 호스트와 앱 컨테이너에서 경로가 같아야 한다
+     *                (docker-compose.prod.yml 이 같은 경로로 bind mount 한다)
+     */
     @Autowired
-    public DockerGradingRunner(AppProperties props) {
-        this(List.of("docker"), Path.of(props.storageDir()).toAbsolutePath().normalize().resolve("grading-work"));
+    public DockerGradingRunner(AppProperties props, @Value("${submithub.grading.work-dir:}") String workDir) {
+        this(List.of("docker"), resolveWorkRoot(props, workDir));
+    }
+
+    static Path resolveWorkRoot(AppProperties props, String workDir) {
+        if (workDir == null || workDir.isBlank()) {
+            return Path.of(props.storageDir()).toAbsolutePath().normalize().resolve("grading-work");
+        }
+        Path p = Path.of(workDir.strip());
+        if (!p.isAbsolute()) {
+            throw new IllegalStateException("submithub.grading.work-dir 은 절대 경로여야 합니다: " + workDir);
+        }
+        return p.normalize();
     }
 
     /** 테스트에서 가짜 docker 명령으로 바꿔 쓰려고 열어 둔 생성자 */

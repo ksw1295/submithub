@@ -36,6 +36,8 @@ submithub:
   storage-dir: ./uploads
   demo-data: true
   professor-signup-code: ""
+  grading:
+    work-dir: ${GRADING_WORK_DIR:}
   max-file-bytes: 5242880
   max-total-bytes: 20971520
   max-files: 200

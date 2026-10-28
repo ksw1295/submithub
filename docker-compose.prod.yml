@@ -60,6 +60,18 @@ services:
     networks:
       - internal
 
+  # 채점 작업 폴더 준비: 채점 컨테이너는 Docker 데몬이 "호스트 경로"를 마운트하므로, 호스트와 app 컨테이너에서
+  # 경로가 같은 bind mount 가 필요하다. 호스트 폴더가 없으면 root 소유로 만들어져 app 이 못 쓰므로 먼저 권한을 준다.
+  grading-init:
+    image: alpine:3
+    environment:
+      GRADING_WORK_DIR: ${GRADING_WORK_DIR:-/srv/submithub/grading-work}
+    command: ["sh", "-c", "mkdir -p \"$$GRADING_WORK_DIR\" && chmod 1777 \"$$GRADING_WORK_DIR\""]
+    volumes:
+      - ${GRADING_WORK_DIR:-/srv/submithub/grading-work}:${GRADING_WORK_DIR:-/srv/submithub/grading-work}
+    networks:
+      - internal
+
   app:
     build: .
     restart: unless-stopped
@@ -68,6 +80,8 @@ services:
         condition: service_healthy
       socket-proxy:
         condition: service_started
+      grading-init:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: mariadb,prod
       DB_URL: jdbc:mariadb://db:3306/submithub
@@ -84,8 +98,10 @@ services:
       SUBMITHUB_DEMO_RESET_CRON: ${DEMO_RESET_CRON:-}
       # 도커 소켓 직접 마운트 대신 socket-proxy 를 통해 제한된 Docker API 만 사용
       DOCKER_HOST: tcp://socket-proxy:2375
+      GRADING_WORK_DIR: ${GRADING_WORK_DIR:-/srv/submithub/grading-work}
     volumes:
       - uploads:/app/uploads
+      - ${GRADING_WORK_DIR:-/srv/submithub/grading-work}:${GRADING_WORK_DIR:-/srv/submithub/grading-work}
       - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]

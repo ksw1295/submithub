@@ -38,7 +38,7 @@
 ```
 
 - **외부 노출 포트**: 오직 Caddy의 HTTP(80), HTTPS(443)와 관리용 SSH(22)만 허용합니다. `app`(8080), `db`(3306), `socket-proxy`(2375)는 외부 포트 바인딩 없이 Docker 내부 네트워크(`internal`)에만 격리됩니다.
-- **자동 채점 컨테이너 보안**: `app`에 도커 소켓을 직접 마운트하지 않고, `socket-proxy`를 통해 컨테이너 실행/삭제에 필요한 API만 최소 허용(`CONTAINERS=1`, `POST=1`)하고 볼륨/네트워크/호스트 조작 API는 원천 차단합니다.
+- **자동 채점 컨테이너 보안**: `app`에 도커 소켓을 직접 마운트하지 않고, `socket-proxy`를 통해 컨테이너 실행/삭제에 필요한 API만 최소 허용(`CONTAINERS=1`, `POST=1`)하고 이미지·볼륨·네트워크·시스템 API 는 차단합니다. 다만 프록시는 요청 내용까지 걸러내지 못하므로, `app` 이 침해되면 임의 옵션(호스트 폴더 마운트 등)으로 컨테이너를 만들 수 있습니다. 즉 `app` 은 호스트 root 와 가까운 권한을 간접적으로 가진다고 보고, 운영 서버는 채점 전용(다른 중요 데이터 없음)으로 쓰세요. 채점 작업 폴더는 호스트와 `app` 컨테이너의 경로가 같아야 해서 `GRADING_WORK_DIR`(기본 `/srv/submithub/grading-work`)을 같은 경로로 bind mount 합니다(`grading-init` 이 권한을 준비).
 - **ARM64 지원**: 배포되는 모든 이미지(`caddy:2-alpine`, `mariadb:11`, `tecnativa/docker-socket-proxy`, `eclipse-temurin:17-jdk`, `python:3.12-slim` 등)는 `linux/arm64`를 공식 지원합니다.
 
 ---

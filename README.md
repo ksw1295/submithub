@@ -74,6 +74,12 @@ DB_URL=jdbc:mariadb://localhost:3306/submithub DB_USER=submithub DB_PASSWORD=...
   mvn spring-boot:run -Dspring-boot.run.profiles=mariadb
 ```
 
+### 4. 실서버 운영 배포 및 시연 가이드
+
+- **[심사위원 5분 시연 가이드](docs/DEMO_GUIDE.md)**: 심사위원이 혼자 따라 할 수 있는 5분 시연 순서 및 화면별 핵심 관전 포인트
+- **[운영 배포 가이드](docs/DEPLOY.md)**: Oracle Cloud ARM64 환경에서 Caddy 자동 HTTPS 및 Docker Compose 기반 실서버 구축 가이드
+
+
 접속 정보는 환경변수나 `application-local.yml`(커밋 제외)에 둡니다.
 
 ### 설정값 (`application.yml` 의 `submithub.*`)
@@ -274,6 +280,15 @@ mvn test
 ## 정량 평가
 
 표절 검사 정확도(변형 9종 × 원본 25개, JPlag 비교)와 diff 성능(기존 LCS vs Myers)을 실험했습니다. 표와 그래프, 한계는 [docs/EVALUATION.md](docs/EVALUATION.md) 에 있고, 실험은 `mvn -Pexperiments test`(JDK 21)로 다시 돌릴 수 있습니다.
+
+## 관련 문서
+
+- [심사위원 시연 가이드 (docs/DEMO_GUIDE.md)](docs/DEMO_GUIDE.md): 5분 핵심 기능 체험 안내서 및 화면별 관전 포인트
+- [운영 배포 가이드 (docs/DEPLOY.md)](docs/DEPLOY.md): Oracle Cloud ARM64 환경 완전 배포 및 보안 아키텍처
+- [정량 평가 보고서 (docs/EVALUATION.md)](docs/EVALUATION.md): 표절 검사 및 diff 성능 정량 실험 결과
+- [아키텍처 설계서 (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md): 시스템 구조 및 보안 설계
+- [사용자 설명서 (docs/USER_MANUAL.md)](docs/USER_MANUAL.md): 교수/학생 기능별 사용 방법
+
 
 ## 한계와 향후 과제
 

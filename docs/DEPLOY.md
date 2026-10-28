@@ -1,17 +1,17 @@
-# SubmitHub 운영 배포 가이드 (Production Deployment Guide)
+# SubmitHub 운영 배포 가이드 (Oracle Cloud ARM64 기준)
 
-이 문서는 SubmitHub를 실서버(Linux ARM64 / AArch64) 환경에 Docker Compose와 Caddy를 사용하여 안전하게 배포하고 운영하기 위한 절차와 아키텍처를 설명합니다.
+이 문서는 SubmitHub를 **Oracle Cloud Infrastructure (OCI) Always Free ARM (AArch64) 가상 머신 1대**에 처음부터 HTTPS 접속까지 완전하게 배포하고 운영하는 단계별 절차를 설명합니다.
 
 ---
 
-## 1. 아키텍처 및 서비스 구성
+## 1. 배포 아키텍처 및 보안 개요
 
 ```
 [인터넷 (Clients)]
        │
-       ▼ (80, 443 포트만 공개 / 자동 HTTPS)
+       ▼ (80, 443 포트만 공개 / Caddy 자동 HTTPS 발급)
 ┌──────────────┐
-│    Caddy     │ (역방향 프록시, Let's Encrypt TLS 인증서 자동 관리)
+│    Caddy     │ (Let's Encrypt / ZeroSSL 인증서 자동 갱신, 보안 헤더, 압축)
 └──────┬───────┘
        │ (내부 브릿지 네트워크 internal)
        ├─────────────────────────────────────┐
@@ -23,7 +23,7 @@
        │ (DOCKER_HOST=tcp://socket-proxy:2375)
        ▼
 ┌──────────────┐
-│ socket-proxy │ (Docker API 게이트웨이 / 위험 API 차단)
+│ socket-proxy │ (Docker 소켓 게이트웨이 / 위험 API 차단)
 └──────┬───────┘
        │ (/var/run/docker.sock:ro 마운트)
        ▼
@@ -37,54 +37,96 @@
 └──────────────────────────────────────────────┘
 ```
 
-- **외부 공개 포트**: Caddy의 HTTP(80), HTTPS(443)만 외부에 열립니다.
-- **내부 포트 격리**: `app`(8080), `db`(3306), `socket-proxy`(2375)는 호스트 포트를 바인딩하지 않으며 Docker 내부 네트워크(`internal`) 안에서만 통신합니다.
-- **헬스체크**:
-  - `db`: `healthcheck.sh --connect --innodb_initialized` (MariaDB 공식 헬스체크)
-  - `app`: `/actuator/health` 엔드포인트를 통해 상태 점검. 외부에 노출 시 `management.endpoint.health.show-details: never` 설정을 통해 `{"status":"UP"}` 외의 내부 구성 정보(DB 연결 정보, 디스크 상태 등)가 노출되지 않도록 보호됩니다.
+- **외부 노출 포트**: 오직 Caddy의 HTTP(80), HTTPS(443)와 관리용 SSH(22)만 허용합니다. `app`(8080), `db`(3306), `socket-proxy`(2375)는 외부 포트 바인딩 없이 Docker 내부 네트워크(`internal`)에만 격리됩니다.
+- **자동 채점 컨테이너 보안**: `app`에 도커 소켓을 직접 마운트하지 않고, `socket-proxy`를 통해 컨테이너 실행/삭제에 필요한 API만 최소 허용(`CONTAINERS=1`, `POST=1`)하고 볼륨/네트워크/호스트 조작 API는 원천 차단합니다.
+- **ARM64 지원**: 배포되는 모든 이미지(`caddy:2-alpine`, `mariadb:11`, `tecnativa/docker-socket-proxy`, `eclipse-temurin:17-jdk`, `python:3.12-slim` 등)는 `linux/arm64`를 공식 지원합니다.
 
 ---
 
-## 2. 자동 채점 컨테이너 실행 방식 비교 및 보안 분석
+## 2. 1단계: OCI 인스턴스 생성 및 네트워크 방화벽 설정
 
-SubmitHub는 학생이 제출한 Java 및 Python 코드를 호스트가 아닌 격리된 도커 컨테이너에서 컴파일하고 실행합니다.
-`app` 컨테이너가 채점 컨테이너를 생성/실행하는 방법 3가지를 비교합니다.
+### 2-1. OCI Always Free 인스턴스 사양
+- **Image**: Canonical Ubuntu 22.04 또는 24.04 (Minimal 또는 Standard aarch64)
+- **Shape**: `VM.Standard.A1.Flex` (Ampere ARM, 2~4 OCPU, 12~24GB RAM 권장)
 
-| 방식 | 구성 요약 | 보안 위험 및 한계 | 안전성 평가 |
+### 2-2. OCI 콘솔 수신 규칙 (Ingress Rules) 설정
+OCI 웹 콘솔에서 인스턴스가 속한 **VCN(가상 클라우드 네트워크) → 보안 목록(Default Security List)**으로 이동하여 아래 3개 포트만 수신 규칙(Ingress Rule)에 추가합니다:
+
+| CIDR | IP 프로토콜 | 대상 포트 범위 | 설명 |
 |---|---|---|---|
-| **1. 도커 소켓 직접 마운트**<br>(`/var/run/docker.sock`) | `app` 컨테이너에 호스트 도커 소켓을 그대로 볼륨 마운트 | - **호스트 완전 장악(Root 탈취)**: 도커 소켓 권한은 호스트의 root 권한과 동일함. 만약 웹 앱 취약점(RCE 등)이 발생하면 공격자가 `docker run -v /:/host-root ...` 명령으로 호스트 루트 파일시스템 전체를 장악하고 컨테이너를 탈출할 수 있음.<br>- 타 컨테이너(DB, Caddy) 임의 조작/삭제 가능. | **절대 사용 금지**<br>(가장 위험) |
-| **2. 도커 소켓 프록시 분리**<br>(`socket-proxy`) **[채택]** | 소켓은 `socket-proxy` 컨테이너만 읽기 전용(`:ro`)으로 마운트하고, `app`은 격리된 내부망에서 프록시 TCP(`2375`)로 통신 | - 프록시 레벨에서 위험 API 원천 차단: `VOLUMES=0`, `NETWORKS=0`, `EXEC=0`, `SWARM=0`, `IMAGES=0`, `SYSTEM=0`.<br>- 채점에 꼭 필요한 `CONTAINERS=1`, `POST=1`만 화이트리스트로 허용.<br>- `app` 컨테이너 내부에는 소켓 파일 자체가 존재하지 않음.<br>- DooD(Docker-out-of-Docker) 바인드 마운트 경로 매핑 관리 필요. | **가장 안전 (권장)** |
-| **3. 호스트 직접 실행**<br>(app을 systemd로 실행) | Caddy와 MariaDB만 컨테이너로 띄우고, Spring Boot 앱은 호스트 OS의 비루트 계정(`submithub`)으로 직접 실행 | - DooD 파일 경로 불일치 문제가 원천 차단됨.<br>- 하지만 호스트에 JDK 17 등 런타임을 직접 설치·관리해야 하여 컨테이너 기반 일관 배포의 이점이 줄어듦.<br>- `docker` 그룹에 속한 사용자는 사실상 root 권한을 가지므로 해당 계정의 보안 관리가 중요함. | **대안 가능**<br>(수동 관리 필요) |
+| `0.0.0.0/0` | TCP | `22` | 관리자 SSH 접속 |
+| `0.0.0.0/0` | TCP | `80` | Caddy HTTP (ACME 챌린지 및 HTTPS 리다이렉트) |
+| `0.0.0.0/0` | TCP | `443` | Caddy HTTPS (웹 서비스 암호화 통신) |
 
-> **선택된 구성**: SubmitHub의 `docker-compose.prod.yml`은 **방법 2(도커 소켓 프록시)**를 채택하여, `app`이 호스트 도커 소켓에 직접 접근하지 못하도록 강력하게 격리합니다.
+> **경고**: `8080`, `3306` 포트는 OCI 수신 규칙에 절대로 추가하지 마십시오.
 
----
+### 2-3. 서버 내부 OS 방화벽 (iptables) 해제 (필수)
+Oracle Cloud 우분투 이미지는 **OS 자체 iptables 방화벽에서 22번 포트 외의 모든 수신 패킷을 기본 차단(REJECT)**하도록 설정되어 있습니다. OCI 콘솔에서 80, 443을 열었더라도 OS 수준에서 허용하지 않으면 접속이 되지 않습니다.
 
-## 3. ARM64 (AArch64) 아키텍처 호환성 검증
+SSH 접속 후 서버 터미널에서 다음 명령을 실행합니다:
 
-배포 대상 서버가 ARM64(aarch64) 아키텍처이므로, 사용되는 모든 도커 이미지가 `linux/arm64`를 공식 지원하는지 검증했습니다.
+```bash
+# 80(HTTP), 443(HTTPS) 포트 허용 규칙을 REJECT 규칙보다 앞에 삽입
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
 
-| 이미지 명칭 | 용도 | ARM64 (aarch64) 지원 여부 | 검증 결과 |
-|---|---|:---:|---|
-| `caddy:2-alpine` | 역방향 프록시 / 자동 HTTPS | **지원** | Docker 공식 다중 아키텍처 매니페스트 (linux/arm64 지원) |
-| `mariadb:11` | 데이터베이스 | **지원** | MariaDB 공식 이미지 (linux/arm64 지원) |
-| `tecnativa/docker-socket-proxy:latest` | 도커 소켓 보안 프록시 | **지원** | 공식 다중 아키텍처 매니페스트 (linux/arm64 네이티브 빌드) |
-| `eclipse-temurin:17-jdk` | Java 채점용 컨테이너 | **지원** | Adoptium 공식 다중 아키텍처 매니페스트 (linux/arm64 지원) |
-| `python:3.12-slim` | Python 채점용 컨테이너 | **지원** | Python 공식 다중 아키텍처 매니페스트 (linux/arm64 지원) |
-| `maven:3.9-eclipse-temurin-17` | 앱 빌드 스테이지 | **지원** | Multi-arch 지원 |
-| `eclipse-temurin:17-jre` | 앱 실행 런타임 | **지원** | Multi-arch 지원 |
-| `docker:cli` | 앱 내부 docker CLI 바이너리 | **지원** | Multi-arch 지원 |
-
-> **결론**: 모든 구성 이미지가 ARM64 아키텍처를 공식 지원하므로 에뮬레이션 없이 네이티브 성능으로 구동됩니다.
+# 재부팅 후에도 규칙이 유지되도록 영구 저장
+sudo apt-get update && sudo apt-get install -y iptables-persistent netfilter-persistent
+sudo netfilter-persistent save
+```
 
 ---
 
-## 4. 사전 필수 작업: 채점 이미지 다운로드 (Pre-pull)
+## 3. 2단계: 무료 도메인 (DuckDNS) 발급 및 IP 자동 갱신
 
-채점 컨테이너(`eclipse-temurin:17-jdk`, `python:3.12-slim`)는 학생의 코드가 최초 제출될 때 실시간으로 실행됩니다.
-만약 서버 기동 후 미리 이미지를 받아두지 않으면, 첫 채점 시 기가바이트 단위의 이미지를 다운로드하느라 채점 타임아웃(3초 기동 유예 시간 초과)이 발생합니다.
+Caddy의 자동 Let's Encrypt SSL/TLS 발급을 위해 고정 도메인이 필요합니다. 무료 DDNS 서비스인 DuckDNS를 활용합니다.
 
-따라서 서버를 가동하기 전에 **반드시 호스트 환경에서 아래 명령으로 채점 이미지를 미리 받아두어야 합니다**:
+1. [DuckDNS 홈페이지](https://www.duckdns.org)에 접속하여 로그인합니다.
+2. 서브도메인을 등록합니다 (예: `submithub.duckdns.org`).
+3. OCI 인스턴스의 공용 IP(Public IP)를 입력하고 저장합니다.
+4. OCI 인스턴스 IP가 변경되더라도 자동으로 도메인과 동기화되도록 서버에 갱신 스크립트와 cron을 등록합니다:
+
+```bash
+mkdir -p ~/duckdns
+cat << 'EOF' > ~/duckdns/duck.sh
+#!/bin/bash
+DOMAIN="your-domain" # 예: submithub (duckdns.org 앞부분)
+TOKEN="your-duckdns-token"
+echo url="https://www.duckdns.org/update?domains=${DOMAIN}&token=${TOKEN}&ip=" | curl -k -s -o ~/duckdns/duck.log -K -
+EOF
+
+chmod 700 ~/duckdns/duck.sh
+~/duckdns/duck.sh # 첫 갱신 테스트 (duck.log 에 OK 출력 확인)
+```
+
+매 10분마다 IP를 자동 갱신하도록 crontab에 등록:
+```bash
+crontab -e
+# 맨 아래에 다음 줄 추가:
+*/10 * * * * /home/ubuntu/duckdns/duck.sh >/dev/null 2>&1
+```
+
+---
+
+## 4. 3단계: Docker 설치 및 채점 이미지 사전 다운로드
+
+### 4-1. Docker CE 공식 설치
+```bash
+# Docker 공식 설치 스크립트 실행
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 현재 사용자를 docker 그룹에 추가하여 sudo 없이 실행
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# 그룹 권한 즉시 반영 (또는 SSH 재접속)
+newgrp docker
+```
+
+### 4-2. 자동 채점 이미지 사전 다운로드 (Pre-pull)
+학생이 코드를 최초 제출할 때 실시간으로 이미지를 받으면 3초 기동 제한 시간을 초과하여 채점 실패가 발생합니다. **서버 시작 전 반드시 미리 받아두어야 합니다**:
 
 ```bash
 docker pull eclipse-temurin:17-jdk
@@ -93,58 +135,146 @@ docker pull python:3.12-slim
 
 ---
 
-## 5. 단계별 배포 순서
+## 5. 4단계: 프로젝트 설정 및 서비스 기동
 
-### 1단계: 환경 변수 설정
-`.env.example` 파일을 복사하여 `.env` 파일을 생성하고 실제 운영 값을 입력합니다:
-
+### 5-1. Git 복제 및 `.env` 설정
 ```bash
+git clone https://github.com/your-username/submithub.git
+cd submithub
+
+# 환경변수 템플릿 복사 및 권한 제한
 cp .env.example .env
 chmod 600 .env
 nano .env
 ```
 
-필수 입력 값:
-- `DOMAIN`: 서비스 도메인 (예: `submithub.your-univ.ac.kr`)
-- `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`: 데이터베이스 계정 및 강력한 무작위 비밀번호
-- `PROFESSOR_SIGNUP_CODE`: 교수 가입 인증용 보안 코드 (비어 있으면 prod 프로필 시작 실패)
-- `GEMINI_API_KEY`: Google Gemini API 키 (선택 사항)
-
-### 2단계: 채점 이미지 사전 다운로드
-```bash
-docker pull eclipse-temurin:17-jdk
-docker pull python:3.12-slim
+`.env` 파일에 실제 운영 값을 입력합니다:
+```dotenv
+DOMAIN=submithub.duckdns.org
+DB_USER=submithub
+DB_PASSWORD=강력한_랜덤_비밀번호_입력!@#123
+DB_ROOT_PASSWORD=강력한_루트_비밀번호_입력!@#456
+PROFESSOR_SIGNUP_CODE=교수_가입_인증코드_지정 (비워둘 시 prod 시작 실패)
+GEMINI_API_KEY=구글_제미나이_API키 (선택)
+DEMO_DATA=false
+RATE_LIMIT_LOGIN=10
+RATE_LIMIT_SUBMIT=5
+RATE_LIMIT_AI_JUDGE=3
+AI_DAILY_LIMIT=100
+DEMO_RESET_CRON=
 ```
 
-### 3단계: Docker Compose 설정 검증
-문법과 환경 변수 바인딩에 문제가 없는지 검증합니다:
-
+### 5-2. 문법 확인 및 백그라운드 기동
 ```bash
+# docker compose 문법 및 변수 바인딩 확인
 docker compose -f docker-compose.prod.yml config
-```
 
-### 4단계: 서비스 빌드 및 백그라운드 시작
-```bash
+# 서비스 빌드 및 백그라운드 시작
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-### 5단계: 상태 및 헬스체크 확인
-모든 컨테이너가 `healthy` 상태가 되었는지 확인합니다:
-
+### 5-3. 기동 상태 및 Caddy HTTPS 발급 확인
 ```bash
+# 전체 컨테이너 상태 점검 (모두 Up/healthy 상태 확인)
 docker compose -f docker-compose.prod.yml ps
+
+# Caddy 로그에서 Let's Encrypt 인증서 발급 확인
+docker compose -f docker-compose.prod.yml logs -f caddy
 ```
 
-외부에서 Caddy 및 애플리케이션 헬스체크가 정상 동작하는지 확인합니다:
+웹 브라우저에서 `https://submithub.duckdns.org` 로 접속하여 정상적으로 자물쇠(HTTPS)가 걸려 있는지 확인합니다.
+
+---
+
+## 6. 5단계: 모니터링 (UptimeRobot) 설정
+
+외부에서 서버 장애를 감지할 수 있도록 무료 모니터링 도구인 **UptimeRobot**을 설정합니다.
+
+1. [UptimeRobot](https://uptimerobot.com)에 무료 회원가입 후 로그인합니다.
+2. **Add New Monitor** 클릭:
+   - **Monitor Type**: `HTTP(s)`
+   - **Friendly Name**: `SubmitHub Prod Health`
+   - **URL (or IP)**: `https://submithub.duckdns.org/actuator/health`
+   - **Monitoring Interval**: `5 minutes`
+3. 알림 수단 설정:
+   - 장애 발생 시 이메일 또는 텔레그램 봇으로 즉시 알림 수신.
+4. **보안 확인**: `/actuator/health` 엔드포인트는 `show-details: never`로 설정되어 있어 내부 DB 정보나 스택 트레이스를 일절 노출하지 않고 오직 `{"status":"UP"}`만 반환하므로 안전합니다.
+
+---
+
+## 7. 6단계: 무중단 업데이트 및 정기 백업
+
+### 7-1. 소스 코드 업데이트 배포
+코드 수정 사항을 반영할 때는 DB와 Caddy를 중단하지 않고 앱 컨테이너만 재빌드하여 배포합니다:
+
 ```bash
-curl -i https://<당신의도메인>/actuator/health
+cd ~/submithub
+git pull origin main
+docker compose -f docker-compose.prod.yml build app
+docker compose -f docker-compose.prod.yml up -d --no-deps app
 ```
 
-정상 응답:
-```http
-HTTP/2 200
-content-type: application/vnd.spring-boot.actuator.v3+json
+### 7-2. DB 및 업로드 파일 정기 백업 스크립트
+데이터 손실에 대비하여 DB 덤프와 업로드 파일을 정기적으로 백업합니다:
 
-{"status":"UP"}
+```bash
+mkdir -p ~/backups ~/scripts
+cat << 'EOF' > ~/scripts/backup.sh
+#!/bin/bash
+set -e
+
+BACKUP_DIR="/home/ubuntu/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+PROJECT_DIR="/home/ubuntu/submithub"
+
+mkdir -p "$BACKUP_DIR"
+
+# .env 파일에서 DB 비밀번호 로드
+source "$PROJECT_DIR/.env"
+
+# 1. MariaDB 데이터베이스 덤프
+docker compose -f "$PROJECT_DIR/docker-compose.prod.yml" exec -T db \
+    mariadb-dump -u root -p"$DB_ROOT_PASSWORD" submithub | gzip > "$BACKUP_DIR/db_${DATE}.sql.gz"
+
+# 2. 업로드 파일 백업
+docker run --rm \
+    -v submithub_uploads:/data:ro \
+    -v "$BACKUP_DIR":/backup \
+    alpine tar -czf "/backup/uploads_${DATE}.tar.gz" -C /data .
+
+# 3. 14일이 지난 오래된 백업 파일 자동 삭제
+find "$BACKUP_DIR" -type f -name "*.gz" -mtime +14 -delete
+
+echo "[$(date)] 백업 완료: db_${DATE}.sql.gz, uploads_${DATE}.tar.gz" >> "$BACKUP_DIR/backup.log"
+EOF
+
+chmod 700 ~/scripts/backup.sh
 ```
-*(기밀 정보나 스택 트레이스 없이 status 만 정상 노출됨)*
+
+매일 새벽 3시에 백업이 실행되도록 cron에 등록:
+```bash
+crontab -e
+# 맨 아래에 추가:
+0 3 * * * /home/ubuntu/scripts/backup.sh >/dev/null 2>&1
+```
+
+---
+
+## 8. 장애 대응 및 서버 유지 관리 (주의사항)
+
+### 8-1. 서버 재부팅 후 자동 복구 확인
+모든 서비스는 `restart: unless-stopped`로 설정되어 있고 docker daemon이 systemd에 등록되어 있으므로, 서버가 재부팅되면 자동으로 모든 컨테이너가 복구됩니다.
+- 확인 명령: `sudo reboot` 실행 후 재접속하여 `docker compose -f docker-compose.prod.yml ps` 확인.
+
+### 8-2. 긴급 상황 시 휴대폰(모바일) 조치 방법
+서버가 응답하지 않을 때 PC가 없어도 스마트폰으로 조치할 수 있습니다:
+1. 스마트폰 브라우저로 [Oracle Cloud Console Mobile](https://cloud.oracle.com)에 로그인 (또는 Oracle Cloud 모바일 앱).
+2. **Compute → Instances → SubmitHub 인스턴스** 선택.
+3. 인스턴스 상단의 **Reboot(재부팅)** 또는 **Force Reboot(강제 재부팅)** 버튼을 누르면 1~2분 내로 서버와 Docker 서비스가 자동 재시작됩니다.
+
+### 8-3. Oracle Cloud Always Free 유휴 회수(Reclamation) 주의 및 대책
+- **회수 조건**: 오라클 클라우드는 7일 연속으로 CPU 사용률 20% 미만, 메모리 사용률 20% 미만, 네트워크 사용률 20% 미만인 Always Free 인스턴스를 "유휴(Idle)" 상태로 간주하고 인스턴스를 회수(정지/삭제)할 수 있습니다.
+- **확인 방법**: OCI 콘솔 → Compute → Instances → 인스턴스 클릭 후 하단 **Metrics** 탭에서 주간 평균 CPU/메모리 사용률 그래프를 확인합니다.
+- **가장 안전한 방지 대책**:
+  1. **계정 업그레이드 (Pay-As-You-Go)**: 신용카드를 등록하여 유료(PAYG) 계정으로 전환하면 Always Free 리소스 한도(ARM 4 OCPU, 24GB RAM, 200GB 디스크) 내에서는 **비용이 0원으로 유지되면서 유휴 인스턴스 회수 대상에서 완전히 영구 제외**됩니다. (강력 권장)
+  2. UptimeRobot의 5분 주기 헬스체크 및 크론 작업으로 네트워크 트래픽 및 기본 워크로드를 상시 유지합니다.

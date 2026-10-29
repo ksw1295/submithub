@@ -11,6 +11,8 @@ import java.util.Optional;
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
     List<Assignment> findByCourseIdOrderByDueAtAsc(Long courseId);
 
+    boolean existsByCourseIdAndTitleAndCreatedAtAfter(Long courseId, String title, java.time.LocalDateTime createdAt);
+
     /** 제출 번호 부여 구간을 직렬화하기 위한 비관적 락 (SELECT ... FOR UPDATE) */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Assignment a where a.id = :id")

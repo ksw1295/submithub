@@ -114,7 +114,12 @@ public class AssignmentService {
     public Assignment create(Long courseId, AppUser professor, AssignmentInput in) {
         Course course = access.courseOfProfessor(courseId, professor);
         validate(in);
-        return assignments.save(new Assignment(course, in.title().trim(), in.description(), in.dueAt(),
+        String trimmedTitle = in.title().trim();
+        LocalDateTime recentThreshold = LocalDateTime.now().minusSeconds(10);
+        if (assignments.existsByCourseIdAndTitleAndCreatedAtAfter(courseId, trimmedTitle, recentThreshold)) {
+            throw new BusinessException("동일한 과제가 방금 등록되었습니다. 중복 등록을 방지합니다.");
+        }
+        return assignments.save(new Assignment(course, trimmedTitle, in.description(), in.dueAt(),
                 in.allowLate(), in.lateUntil(), baseline(in), in.teamProject(), in.maxTeamSize()));
     }
 

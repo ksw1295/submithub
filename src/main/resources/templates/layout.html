@@ -174,5 +174,25 @@
 <script th:src="@{/webjars/bootstrap/5.3.3/dist/js/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/webjars/highlightjs__cdn-assets/11.9.0/highlight.min.js}"></script>
 <script th:src="@{/js/code-view.js}"></script>
+<script>
+// 전역 폼 이중 제출(모바일 더블 탭 / 지연 시 중복 클릭) 방지
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (form.dataset.submitting === 'true') {
+                e.preventDefault();
+                return false;
+            }
+            form.dataset.submitting = 'true';
+            var submitButtons = form.querySelectorAll('button[type="submit"]');
+            submitButtons.forEach(function(btn) {
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.75';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>처리 중...';
+            });
+        });
+    });
+});
+</script>
 </body>
 </html>

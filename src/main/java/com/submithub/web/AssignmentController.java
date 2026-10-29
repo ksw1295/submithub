@@ -9,6 +9,7 @@ import com.submithub.service.FeedbackService;
 import com.submithub.service.GradingService;
 import com.submithub.service.SubmissionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -55,6 +56,11 @@ public class AssignmentController {
         private String baselineCode;
 
         private MultipartFile baselineFile;
+
+        private boolean teamProject;
+
+        @Min(value = 2, message = "최대 팀 인원은 2명 이상이어야 합니다.")
+        private Integer maxTeamSize;
     }
 
     private final AssignmentService assignmentService;
@@ -134,6 +140,8 @@ public class AssignmentController {
         form.setDueAt(a.getDueAt());
         form.setAllowLate(a.isAllowLate());
         form.setLateUntil(a.getLateUntil());
+        form.setTeamProject(a.isTeamProject());
+        form.setMaxTeamSize(a.getMaxTeamSize());
         model.addAttribute("form", form);
         model.addAttribute("courseId", a.getCourse().getId());
         model.addAttribute("assignmentId", id);
@@ -182,6 +190,6 @@ public class AssignmentController {
             throw new BusinessException("뼈대 코드 파일을 읽지 못했습니다.");
         }
         return new AssignmentInput(f.getTitle(), f.getDescription(), f.getDueAt(), f.isAllowLate(),
-                f.getLateUntil(), f.getBaselineCode(), file);
+                f.getLateUntil(), f.getBaselineCode(), file, f.isTeamProject(), f.getMaxTeamSize());
     }
 }

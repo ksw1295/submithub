@@ -119,6 +119,26 @@ class CourseAssignmentServiceTest {
     }
 
     @Test
+    void 조별과제를_등록하고_수정할수_있다() {
+        AppUser prof = data.professor();
+        Course course = data.course(prof);
+        LocalDateTime due = LocalDateTime.now().plusDays(7);
+
+        Assignment created = assignmentService.create(course.getId(), prof, new AssignmentService.AssignmentInput(
+                "RAG 팀 과제", "팀 프로젝트 설명", due, true, due.plusDays(2), null, null, true, 4));
+
+        assertThat(created.isTeamProject()).isTrue();
+        assertThat(created.getMaxTeamSize()).isEqualTo(4);
+
+        assignmentService.update(created.getId(), prof, new AssignmentService.AssignmentInput(
+                "RAG 팀 과제 수정", "설명 수정", due, true, due.plusDays(2), null, null, true, 5));
+
+        Assignment updated = assignmentService.editable(created.getId(), prof);
+        assertThat(updated.isTeamProject()).isTrue();
+        assertThat(updated.getMaxTeamSize()).isEqualTo(5);
+    }
+
+    @Test
     void 과제_입력값_검증() {
         AppUser prof = data.professor();
         Course course = data.course(prof);

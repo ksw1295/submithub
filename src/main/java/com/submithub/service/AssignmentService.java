@@ -32,7 +32,12 @@ public class AssignmentService {
 
     /** 입력 값 묶음 (폼 → 서비스) */
     public record AssignmentInput(String title, String description, LocalDateTime dueAt, boolean allowLate,
-                                  LocalDateTime lateUntil, String baselineCode, byte[] baselineFile) {
+                                  LocalDateTime lateUntil, String baselineCode, byte[] baselineFile,
+                                  boolean teamProject, Integer maxTeamSize) {
+        public AssignmentInput(String title, String description, LocalDateTime dueAt, boolean allowLate,
+                               LocalDateTime lateUntil, String baselineCode, byte[] baselineFile) {
+            this(title, description, dueAt, allowLate, lateUntil, baselineCode, baselineFile, false, null);
+        }
     }
 
     /**
@@ -100,7 +105,7 @@ public class AssignmentService {
         Course course = access.courseOfProfessor(courseId, professor);
         validate(in);
         return assignments.save(new Assignment(course, in.title().trim(), in.description(), in.dueAt(),
-                in.allowLate(), in.lateUntil(), baseline(in)));
+                in.allowLate(), in.lateUntil(), baseline(in), in.teamProject(), in.maxTeamSize()));
     }
 
     @Transactional
@@ -111,6 +116,7 @@ public class AssignmentService {
         String baseline = baseline(in);
         a.update(in.title().trim(), in.description(), in.dueAt(), in.allowLate(), in.lateUntil(),
                 baseline != null ? baseline : a.getBaselineCode());
+        a.configureTeam(in.teamProject(), in.maxTeamSize());
         return a;
     }
 
@@ -140,6 +146,9 @@ public class AssignmentService {
         }
         if (in.allowLate() && in.lateUntil() != null && in.lateUntil().isBefore(in.dueAt())) {
             throw new BusinessException("지각 허용 기한은 마감 일시보다 늦어야 합니다.");
+        }
+        if (in.teamProject() && in.maxTeamSize() != null && in.maxTeamSize() < 2) {
+            throw new BusinessException("최대 팀 인원은 2명 이상이어야 합니다.");
         }
     }
 

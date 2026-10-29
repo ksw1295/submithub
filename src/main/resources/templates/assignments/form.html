@@ -39,6 +39,35 @@
                             <label class="form-check-label" for="allowLate1">마감 후 지각 제출 허용 (지각으로 표시됨)</label>
                         </div>
                         <hr class="my-4">
+                        <h2 class="h6 mb-2">👥 조별(팀) 과제 설정</h2>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" th:field="*{teamProject}" id="teamProjectCheck">
+                            <label class="form-check-label fw-semibold" for="teamProjectCheck">
+                                조별(팀) 과제로 운영
+                            </label>
+                            <div class="form-text">체크 시 학생들이 조를 만들고 공용 GitHub 저장소 및 개인 개발 브랜치를 매핑하여 '기여도 감사'를 수행할 수 있습니다.</div>
+                        </div>
+                        <div class="mb-3" id="teamSizeGroup" th:classappend="${form.teamProject} ? '' : 'd-none'">
+                            <label class="form-label" for="maxTeamSize">최대 팀 인원 수 <small class="text-muted fw-normal">(선택, 비우면 인원 제한 없음)</small></label>
+                            <input class="form-control" type="number" min="2" max="20" th:errorclass="is-invalid" th:field="*{maxTeamSize}" placeholder="예: 4 (최소 2명 이상)">
+                            <div class="invalid-feedback" th:errors="*{maxTeamSize}"></div>
+                        </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                var chk = document.getElementById('teamProjectCheck');
+                                var grp = document.getElementById('teamSizeGroup');
+                                if (chk && grp) {
+                                    chk.addEventListener('change', function() {
+                                        if (this.checked) {
+                                            grp.classList.remove('d-none');
+                                        } else {
+                                            grp.classList.add('d-none');
+                                        }
+                                    });
+                                }
+                            });
+                        </script>
+                        <hr class="my-4">
                         <h2 class="h6 mb-2">뼈대 코드 <small class="text-muted fw-normal">(선택) — 교수가 나눠준 코드. 표절 검사에서 이 부분은 제외됩니다.</small></h2>
                         <p class="small text-success" th:if="${hasBaseline}">현재 뼈대 코드가 등록되어 있습니다. 새로 입력하면 교체되고, 비워 두면 유지됩니다.</p>
                         <div class="mb-3">

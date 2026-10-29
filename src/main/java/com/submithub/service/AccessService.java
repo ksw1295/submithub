@@ -53,6 +53,13 @@ public class AccessService {
         return course;
     }
 
+    /** 학생이 해당 강의를 수강 중인지 확인 (미수강 시 403 Forbidden) */
+    public void requireEnrolled(Long courseId, Long studentId) {
+        if (!enrollments.existsByCourseIdAndStudentId(courseId, studentId)) {
+            throw new ForbiddenException("수강 중인 강의가 아닙니다.");
+        }
+    }
+
     /** 강의를 연 교수만 */
     public Course courseOfProfessor(Long courseId, AppUser user) {
         Course course = courses.findById(courseId).orElseThrow(() -> new NotFoundException("강의를 찾을 수 없습니다."));

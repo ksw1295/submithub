@@ -362,7 +362,7 @@ public class DemoDataLoader implements ApplicationRunner {
                         "README.md", DemoCode.RAG_README));
 
         // ---- 조별 과제 (팀 프로젝트) 및 브랜치 매핑 구성 ----
-        Team team1 = teams.save(new Team(aAi, "1조 - 대학 RAG 챗봇팀", "ksw1295/univ-rag-chatbot", s1));
+        Team team1 = teams.save(new Team(aAi, "1조 - 대학 RAG 챗봇팀", "https://github.com/ksw1295/univ-rag-chatbot", s1));
         teamMembers.save(new TeamMember(team1, s1, "feature/rag-pipeline", "AI 엔진 & RAG 파이프라인 (팀장)"));
         teamMembers.save(new TeamMember(team1, s3, "feature/streamlit-ui", "Streamlit 웹 대시보드 인터페이스"));
         teamMembers.save(new TeamMember(team1, s4, "feature/rest-api", "FastAPI 규정 검색 API 서버"));

@@ -62,8 +62,26 @@ public class TeamAuditService {
 
     public TeamAuditReport auditTeam(Long teamId, AppUser currentUser) {
         Team team = teams.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("팀을 찾을 수 없습니다: " + teamId));
+                .orElseThrow(() -> new NotFoundException("팀을 찾을 수 없습니다: " + teamId));
         Assignment assignment = team.getAssignment();
+        Course course = assignment.getCourse();
+
+        if (currentUser == null) {
+            throw new ForbiddenException("로그인이 필요합니다.");
+        }
+
+        boolean isCourseProfessor = currentUser.isProfessor() && course.getProfessor().getId().equals(currentUser.getId());
+        boolean isTeamMember = !currentUser.isProfessor() && team.getMembers().stream()
+                .anyMatch(m -> m.getStudent().getId().equals(currentUser.getId()));
+
+        if (!isCourseProfessor && !isTeamMember) {
+            if (currentUser.isProfessor()) {
+                throw new ForbiddenException("다른 교수의 강의입니다.");
+            } else {
+                throw new ForbiddenException("해당 팀의 팀원만 감사 리포트를 조회할 수 있습니다.");
+            }
+        }
+
         List<TeamMember> teamMembers = team.getMembers();
 
         Map<Long, List<Submission>> memberSubmissions = new LinkedHashMap<>();
@@ -105,6 +123,11 @@ public class TeamAuditService {
                 latestSubId = latest.getId();
                 latestCommit = latest.getSourceCommit();
                 score = grades.findBySubmissionId(latestSubId).map(Grade::getScore).orElse(null);
+            }
+
+            // 학생이 조회할 때 다른 팀원의 점수는 숨긴다 (null)
+            if (score != null && !isCourseProfessor && !sId.equals(currentUser.getId())) {
+                score = null;
             }
 
             int lines = memberCodeLines.get(sId);

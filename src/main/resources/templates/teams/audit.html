@@ -100,6 +100,7 @@
                     <th class="text-end">유효 라인(LoC)</th>
                     <th class="text-end">기여율</th>
                     <th class="text-center">피드백 반영률</th>
+                    <th class="text-center">점수</th>
                     <th class="text-center">기여 판정</th>
                     <th class="text-end">코드 확인</th>
                 </tr>
@@ -135,6 +136,10 @@
                         <span th:if="${m.feedbackRatePercent >= 0}" class="badge" th:classappend="${m.feedbackRatePercent == 100 ? 'text-bg-success' : 'text-bg-info'}"
                               th:text="${m.feedbackRatePercent} + '% (' + ${m.feedbackTotal - m.feedbackRemaining} + '/' + ${m.feedbackTotal} + ')'">100%</span>
                         <span th:if="${m.feedbackRatePercent < 0}" class="text-muted small">리뷰 없음</span>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${m.score != null}" th:text="${m.score} + '점'" class="fw-semibold">100점</span>
+                        <span th:if="${m.score == null}" class="text-muted">-</span>
                     </td>
                     <td class="text-center">
                         <span class="badge" th:classappend="${m.healthBadgeClass}" th:text="${m.healthBadge}">정상 기여</span>

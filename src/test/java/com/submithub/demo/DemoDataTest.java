@@ -222,7 +222,7 @@ class DemoDataTest {
 
         var team = teams.get(0);
         assertThat(team.getName()).contains("1조");
-        assertThat(team.getRepoUrl()).isEqualTo("ksw1295/univ-rag-chatbot");
+        assertThat(team.getRepoUrl()).isEqualTo("https://github.com/ksw1295/univ-rag-chatbot");
         assertThat(team.getMembers()).hasSize(3);
 
         var report = teamAuditService.auditTeam(team.getId(), prof2);

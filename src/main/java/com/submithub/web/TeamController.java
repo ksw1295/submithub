@@ -5,15 +5,19 @@ import com.submithub.domain.Course;
 import com.submithub.domain.Team;
 import com.submithub.security.AppUser;
 import com.submithub.service.AssignmentService;
+import com.submithub.service.NotFoundException;
 import com.submithub.service.TeamAuditService;
 import com.submithub.service.TeamService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -26,6 +30,7 @@ public class TeamController {
     @Setter
     public static class CreateTeamForm {
         @NotBlank(message = "팀명을 입력하세요.")
+        @Size(max = 100, message = "팀명은 100자 이하이어야 합니다.")
         private String name;
         private String repoUrl;
         private String branchName;
@@ -71,34 +76,48 @@ public class TeamController {
     @PostMapping("/assignments/{assignmentId}/teams")
     @PreAuthorize("hasRole('STUDENT')")
     public String createTeam(@PathVariable Long assignmentId,
-                             @ModelAttribute CreateTeamForm form,
+                             @Valid @ModelAttribute("createTeamForm") CreateTeamForm form,
+                             BindingResult bindingResult,
                              @AuthenticationPrincipal AppUser user,
                              RedirectAttributes ra) {
+        String fallbackUrl = "/assignments/" + assignmentId + "/teams";
+        if (bindingResult.hasErrors()) {
+            ra.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return "redirect:" + fallbackUrl;
+        }
         try {
             teamService.createTeam(assignmentId, form.getName(), form.getRepoUrl(), user.getId(),
                     form.getBranchName(), form.getRoleTitle());
             ra.addFlashAttribute("successMessage", "팀 '" + form.getName() + "'이 성공적으로 생성되었습니다.");
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/assignments/" + assignmentId + "/teams";
+        return "redirect:" + fallbackUrl;
     }
 
     @PostMapping("/teams/{teamId}/join")
     @PreAuthorize("hasRole('STUDENT')")
     public String joinTeam(@PathVariable Long teamId,
-                           @ModelAttribute JoinTeamForm form,
+                           @Valid @ModelAttribute("joinTeamForm") JoinTeamForm form,
+                           BindingResult bindingResult,
                            @AuthenticationPrincipal AppUser user,
                            RedirectAttributes ra) {
-        try {
-            Team team = teamService.getTeam(teamId).orElseThrow();
-            teamService.joinTeam(teamId, user.getId(), form.getBranchName(), form.getRoleTitle());
-            ra.addFlashAttribute("successMessage", "'" + team.getName() + "' 팀에 참여했습니다.");
-            return "redirect:/assignments/" + team.getAssignment().getId() + "/teams";
-        } catch (Exception e) {
-            ra.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/assignments";
+        Team team = teamService.getTeam(teamId).orElse(null);
+        Long assignmentId = team != null ? team.getAssignment().getId() : null;
+        String fallbackUrl = assignmentId != null ? "/assignments/" + assignmentId + "/teams" : "/courses";
+
+        if (bindingResult.hasErrors()) {
+            ra.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return "redirect:" + fallbackUrl;
         }
+
+        try {
+            teamService.joinTeam(teamId, user.getId(), form.getBranchName(), form.getRoleTitle());
+            ra.addFlashAttribute("successMessage", "'" + (team != null ? team.getName() : "") + "' 팀에 참여했습니다.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:" + fallbackUrl;
     }
 
     @GetMapping("/teams/{teamId}/audit")
@@ -107,7 +126,7 @@ public class TeamController {
                             @AuthenticationPrincipal AppUser user,
                             Model model) {
         Team team = teamService.getTeam(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("팀을 찾을 수 없습니다: " + teamId));
+                .orElseThrow(() -> new NotFoundException("팀을 찾을 수 없습니다: " + teamId));
         TeamAuditService.TeamAuditReport report = auditService.auditTeam(teamId, user);
 
         model.addAttribute("team", team);

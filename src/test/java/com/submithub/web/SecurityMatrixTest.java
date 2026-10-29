@@ -45,11 +45,13 @@ class SecurityMatrixTest {
     @Autowired CourseService courseService;
     @Autowired SubmissionService submissionService;
     @Autowired SimilarityService similarityService;
+    @Autowired com.submithub.service.TeamService teamService;
+    @Autowired com.submithub.domain.AssignmentRepository assignmentRepository;
 
     AppUser prof, otherProf, stu, classmate, outsider;
     Course course;
     Assignment assignment;
-    Long submissionId, fileId, pairId;
+    Long submissionId, fileId, pairId, teamId;
 
     @BeforeEach
     void setUp() {
@@ -62,6 +64,9 @@ class SecurityMatrixTest {
         courseService.join(stu, course.getInviteCode());
         courseService.join(classmate, course.getInviteCode());
         assignment = data.assignment(course, prof, Duration.ofDays(2), false, null);
+        assignment.configureTeam(true, 4);
+        assignmentRepository.save(assignment);
+
         String code = "class A {\n  int f(int x) { for (int i = 0; i < x; i++) { x += i * 2; } return x; }\n"
                 + "  int g(int y) { while (y > 0) { y -= 3; if (y % 2 == 0) { y++; } } return y; }\n}\n";
         submissionId = submissionService.submit(assignment.getId(), stu,
@@ -70,6 +75,10 @@ class SecurityMatrixTest {
                 List.of(new Upload("A.java", code.getBytes(StandardCharsets.UTF_8))), null);
         fileId = submissionService.view(submissionId, null, prof).selectedFileId();
         pairId = similarityService.run(assignment.getId(), 0.5, prof).pairs().get(0).id();
+
+        var t = teamService.createTeam(assignment.getId(), "보안팀", "https://github.com/owner/repo",
+                stu.getId(), "main", "팀장");
+        teamId = t.getId();
     }
 
     /** 주소 하나와, 그 주소를 열 수 있는 사람들의 이름표 */
@@ -90,6 +99,8 @@ class SecurityMatrixTest {
                 new Rule("/similarity/pairs/" + pairId, Set.of("prof")),
                 new Rule(a + "/edit", Set.of("prof")),
                 new Rule(a + "/grading", Set.of("prof")),
+                new Rule(a + "/teams", Set.of("prof", "stu", "classmate")),
+                new Rule("/teams/" + teamId + "/audit", Set.of("prof", "stu")),
                 new Rule("/courses/" + course.getId() + "/assignments/new", Set.of("prof")));
     }
 
@@ -140,6 +151,13 @@ class SecurityMatrixTest {
                             .param("title", "해킹").param("dueAt", "2030-01-01T10:00"))
                     .andExpect(status().isForbidden());
             assertThat(label).isNotBlank();
+        }
+        // 수강하지 않은 학생과 교수는 팀을 생성하거나 가입할 수 없다 (403)
+        for (AppUser who : List.of(otherProf, outsider, prof)) {
+            mvc.perform(post(a + "/teams").with(user(who)).with(csrf()).param("name", "해킹팀"))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/teams/" + teamId + "/join").with(user(who)).with(csrf()))
+                    .andExpect(status().isForbidden());
         }
         // 학생은 강의를 만들 수도 없다
         mvc.perform(post("/courses/new").with(user(stu)).with(csrf()).param("name", "x").param("semester", "y"))

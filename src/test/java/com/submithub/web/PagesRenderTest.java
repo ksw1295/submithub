@@ -294,16 +294,20 @@ class PagesRenderTest {
     }
 
     @Autowired com.submithub.service.TeamService teamService;
+    @Autowired com.submithub.domain.AssignmentRepository assignmentRepository;
 
     @Test
     void 조별_과제_팀_목록과_기여도_감사_화면이_정상_렌더링된다() throws Exception {
+        assignment.configureTeam(true, 4);
+        assignmentRepository.save(assignment);
+
         // 교수, 학생 둘 다 팀 목록 접근 가능
         mvc.perform(get("/assignments/" + assignment.getId() + "/teams").with(user(prof)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("조별 과제 / 팀 관리")));
 
         // 학생이 팀 생성
-        com.submithub.domain.Team team = teamService.createTeam(assignment.getId(), "테스트조", "owner/repo", stu.getId(), "main", "팀장");
+        com.submithub.domain.Team team = teamService.createTeam(assignment.getId(), "테스트조", "https://github.com/owner/repo", stu.getId(), "main", "팀장");
 
         // 팀 감사(Audit) 화면 렌더링
         mvc.perform(get("/teams/" + team.getId() + "/audit").with(user(prof)))

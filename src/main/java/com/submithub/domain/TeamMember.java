@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "team_members", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"team_id", "student_id"})
+        @UniqueConstraint(name = "uk_team_member_assignment_student", columnNames = {"assignment_id", "student_id"}),
+        @UniqueConstraint(name = "uk_team_member_team_student", columnNames = {"team_id", "student_id"})
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -19,6 +20,10 @@ public class TeamMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "assignment_id")
+    private Assignment assignment;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "team_id")
@@ -41,6 +46,7 @@ public class TeamMember {
 
     public TeamMember(Team team, User student, String branchName, String roleTitle) {
         this.team = team;
+        this.assignment = team.getAssignment();
         this.student = student;
         this.branchName = branchName;
         this.roleTitle = roleTitle;

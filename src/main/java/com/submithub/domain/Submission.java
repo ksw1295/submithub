@@ -53,6 +53,10 @@ public class Submission {
     @Column(name = "source_commit", length = 40, updatable = false)
     private String sourceCommit;
 
+    /** GitHub 제출 때 입력한 브랜치 또는 SHA (비웠으면 "HEAD"). 이 컬럼 도입 전의 제출은 null */
+    @Column(name = "source_ref", length = 200, updatable = false)
+    private String sourceRef;
+
     @OneToMany(mappedBy = "submission", cascade = CascadeType.PERSIST)
     @OrderBy("path ASC")
     private List<SubmissionFile> files = new ArrayList<>();
@@ -68,9 +72,10 @@ public class Submission {
     }
 
     /** GitHub 커밋 출처를 기록한다 (저장 전에만 호출) */
-    public void setSource(String repo, String commitSha) {
+    public void setSource(String repo, String commitSha, String ref) {
         this.sourceRepo = repo;
         this.sourceCommit = commitSha;
+        this.sourceRef = ref;
     }
 
     public boolean fromGitHub() {

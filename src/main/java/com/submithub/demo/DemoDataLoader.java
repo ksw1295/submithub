@@ -411,7 +411,7 @@ public class DemoDataLoader implements ApplicationRunner {
                               String sourceRepo, String sourceCommit, Map<String, String> files) {
         Submission s = new Submission(a, student, version, message, at.isAfter(a.getDueAt()), at);
         if (sourceRepo != null && sourceCommit != null) {
-            s.setSource(sourceRepo, sourceCommit);
+            s.setSource(sourceRepo, sourceCommit, null);   // 시연 데이터는 어느 브랜치에서 냈는지 기록하지 않는다 (감사 화면에 "브랜치 확인 불가")
         }
         files.forEach((path, text) -> {
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);

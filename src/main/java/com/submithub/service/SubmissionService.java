@@ -131,7 +131,7 @@ public class SubmissionService {
         String memo = memoOf(message);
         // 파일 검사·해시·문자집합 판별은 락을 잡기 전에 끝낸다
         List<Prepared> prepared = prepare(processor.process(uploads));
-        return commit(assignmentId, student, prepared, memo, null, null);
+        return commit(assignmentId, student, prepared, memo, null, null, null);
     }
 
     private static String memoOf(String message) {
@@ -165,7 +165,7 @@ public class SubmissionService {
         rejectSameCommit(assignmentId, student.getId(), ref.fullName(), commit.sha());   // 파일을 받기 전에 먼저 막는다
         List<Prepared> prepared = prepare(github.files(ref, commit.sha()));
         String memo = userMemo != null && !userMemo.isEmpty() ? userMemo : commitTitle(commit.message());
-        return commit(assignmentId, student, prepared, memo, ref.fullName(), commit.sha());
+        return commit(assignmentId, student, prepared, memo, ref.fullName(), commit.sha(), ref.ref());
     }
 
     static String commitTitle(String commitMessage) {
@@ -183,12 +183,12 @@ public class SubmissionService {
     }
 
     private SubmitResult commit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo,
-                                String sourceRepo, String sourceCommit) {
+                                String sourceRepo, String sourceCommit, String sourceRef) {
         SubmitResult result;
         try {
-            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit, sourceRef));
         } catch (DataIntegrityViolationException e) {
-            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit));
+            result = tx.execute(status -> doSubmit(assignmentId, student, prepared, memo, sourceRepo, sourceCommit, sourceRef));
         }
         // 제출이 커밋된 뒤에, 강의에서 AI 판정을 켰다면 비동기로 반영 판정을 시작한다 (실패해도 제출에는 영향 없음)
         aiJudge.onNewVersion(assignmentId, student.getId());
@@ -198,7 +198,7 @@ public class SubmissionService {
     }
 
     private SubmitResult doSubmit(Long assignmentId, AppUser student, List<Prepared> prepared, String memo,
-                                  String sourceRepo, String sourceCommit) {
+                                  String sourceRepo, String sourceCommit, String sourceRef) {
         access.assignment(assignmentId, student);   // 수강 중인 강의의 과제인지
         Assignment assignment = assignments.findByIdForUpdate(assignmentId)
                 .orElseThrow(() -> new NotFoundException("과제를 찾을 수 없습니다."));
@@ -215,7 +215,7 @@ public class SubmissionService {
         User owner = users.getReferenceById(student.getId());
         Submission submission = new Submission(assignment, owner, version, memo, assignment.isPastDue(now), now);
         if (sourceCommit != null) {
-            submission.setSource(sourceRepo, sourceCommit);
+            submission.setSource(sourceRepo, sourceCommit, sourceRef);
         }
 
         List<String> written = new ArrayList<>();

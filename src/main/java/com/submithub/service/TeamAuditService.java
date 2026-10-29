@@ -3,6 +3,7 @@ package com.submithub.service;
 import com.submithub.core.similarity.CodeTokenizer;
 import com.submithub.core.similarity.SimilarityChecker;
 import com.submithub.domain.*;
+import com.submithub.github.GitHubRepoRef;
 import com.submithub.security.AppUser;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -179,8 +180,18 @@ public class TeamAuditService {
                     String subRepo = normalizeRepo(latest.getSourceRepo());
                     String teamRepo = normalizeRepo(team.getRepoUrl());
                     if (!subRepo.isEmpty() && subRepo.equals(teamRepo)) {
-                        branchStatus = "저장소 일치 ✔";
-                        branchStatusClass = "badge-success";
+                        String ref = latest.getSourceRef();
+                        if (ref == null || ref.isBlank() || "HEAD".equals(ref) || GitHubRepoRef.isSha(ref)) {
+                            // SHA 로만 냈거나 기본 브랜치(이름을 모름)로 낸 경우: 어느 브랜치인지 알 수 없다
+                            branchStatus = "브랜치 확인 불가";
+                            branchStatusClass = "badge-secondary";
+                        } else if (ref.equals(m.getBranchName())) {
+                            branchStatus = "브랜치 일치 ✔";
+                            branchStatusClass = "badge-success";
+                        } else {
+                            branchStatus = "브랜치 불일치 ✖";
+                            branchStatusClass = "badge-danger";
+                        }
                     } else {
                         branchStatus = "저장소 불일치 ✖";
                         branchStatusClass = "badge-danger";

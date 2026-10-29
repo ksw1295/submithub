@@ -64,6 +64,11 @@ public record GitHubRepoRef(String owner, String repo, String ref) {
     }
 
     public boolean looksLikeSha() {
-        return SHA.matcher(ref).matches();
+        return isSha(ref);
+    }
+
+    /** 7~40자리 16진수면 SHA 로 본다 (그런 이름의 브랜치는 SHA 와 구분할 수 없다) */
+    public static boolean isSha(String ref) {
+        return ref != null && SHA.matcher(ref).matches();
     }
 }

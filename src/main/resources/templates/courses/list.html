@@ -13,6 +13,59 @@
             <a class="btn btn-primary" sec:authorize="hasRole('STUDENT')" th:href="@{/courses/join}">초대 코드로 수강 등록</a>
         </div>
     </div>
+
+    <!-- 학생 전용 대시보드 위젯 (마감 임박 과제 & 최신 등록 과제) -->
+    <div sec:authorize="hasRole('STUDENT')" th:if="${(dueSoon != null and !#lists.isEmpty(dueSoon)) or (recent != null and !#lists.isEmpty(recent))}" class="row g-3 mb-4">
+        <!-- 마감 임박 과제 -->
+        <div class="col-lg-6" th:if="${dueSoon != null and !#lists.isEmpty(dueSoon)}">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-header bg-warning bg-opacity-10 border-warning d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-bold text-dark"><span class="badge text-bg-warning text-dark me-1">DUE</span> 🚨 마감 임박 과제</span>
+                    <span class="badge text-bg-warning text-dark" th:text="${#lists.size(dueSoon)} + '건'">0건</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a th:each="a : ${dueSoon}" th:href="@{/assignments/{id}(id=${a.id})}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                        <div class="me-2 text-truncate">
+                            <span class="badge text-bg-secondary mb-1" th:text="${a.courseName}">강의명</span>
+                            <div class="fw-semibold text-dark text-truncate" th:text="${a.title}">과제 제목</div>
+                            <small class="text-danger">
+                                마감: <span th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}">마감일</span>
+                                <span th:if="${a.hoursLeft >= 0}" th:text="'(' + ${a.hoursLeft} + '시간 남음)'"></span>
+                            </small>
+                        </div>
+                        <span class="btn btn-sm btn-outline-danger text-nowrap">제출하기 &rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 최신 등록 과제 -->
+        <div class="col-lg-6" th:if="${recent != null and !#lists.isEmpty(recent)}" th:classappend="${dueSoon == null or #lists.isEmpty(dueSoon)} ? 'col-lg-12' : ''">
+            <div class="card shadow-sm border-primary h-100">
+                <div class="card-header bg-primary bg-opacity-10 border-primary d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-bold text-dark"><span class="badge text-bg-primary me-1">NEW</span> 📢 최신 등록 과제</span>
+                    <span class="badge text-bg-primary" th:text="${#lists.size(recent)} + '건'">0건</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a th:each="a : ${recent}" th:href="@{/assignments/{id}(id=${a.id})}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                        <div class="me-2 text-truncate">
+                            <span class="badge text-bg-secondary mb-1" th:text="${a.courseName}">강의명</span>
+                            <div class="fw-semibold text-dark text-truncate" th:text="${a.title}">과제 제목</div>
+                            <small class="text-muted">
+                                마감: <span th:text="${#temporals.format(a.dueAt, 'yyyy-MM-dd HH:mm')}">마감일</span>
+                            </small>
+                        </div>
+                        <div class="text-end text-nowrap">
+                            <span th:if="${a.myVersions > 0}" class="badge text-bg-success">제출 완료 (v[[${a.myVersions}]])</span>
+                            <span th:unless="${a.myVersions > 0}" class="badge text-bg-outline-secondary border">미제출</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="alert alert-secondary" th:if="${#lists.isEmpty(courses)}">
         <span sec:authorize="hasRole('PROFESSOR')">아직 개설한 강의가 없습니다. 강의를 개설하면 학생에게 줄 초대 코드가 발급됩니다.</span>
         <span sec:authorize="hasRole('STUDENT')">아직 수강 중인 강의가 없습니다. 교수에게 받은 초대 코드를 입력하세요.</span>

@@ -43,14 +43,20 @@ public class CourseController {
     }
 
     private final CourseService courseService;
+    private final com.submithub.service.AssignmentService assignmentService;
 
-    public CourseController(CourseService courseService) {
+    public CourseController(CourseService courseService, com.submithub.service.AssignmentService assignmentService) {
         this.courseService = courseService;
+        this.assignmentService = assignmentService;
     }
 
     @GetMapping("/courses")
     public String list(@AuthenticationPrincipal AppUser user, Model model) {
         model.addAttribute("courses", courseService.myCourses(user));
+        if (user != null && !user.isProfessor()) {
+            model.addAttribute("dueSoon", assignmentService.dueSoonForStudent(user));
+            model.addAttribute("recent", assignmentService.recentForStudent(user));
+        }
         return "courses/list";
     }
 

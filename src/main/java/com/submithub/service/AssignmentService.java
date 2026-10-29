@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -101,6 +102,63 @@ public class AssignmentService {
         }
         return new AssignmentRow(a.getId(), a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(),
                 state, versions);
+    }
+
+    public record StudentDashboardAssignment(Long id, Long courseId, String courseName, String title,
+                                             LocalDateTime dueAt, boolean allowLate, LocalDateTime lateUntil,
+                                             String state, int myVersions, long hoursLeft) {
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentDashboardAssignment> dueSoonForStudent(AppUser student) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Assignment> list = assignments.findUpcomingForStudent(student.getId());
+        List<StudentDashboardAssignment> result = new ArrayList<>();
+        for (Assignment a : list) {
+            if (!a.isOpen(now)) {
+                continue;
+            }
+            int versions = 0;
+            String state = stateOf(a, now);
+            var latest = submissions.findTopByAssignmentIdAndStudentIdOrderByVersionNoDesc(a.getId(), student.getId());
+            if (latest.isPresent()) {
+                versions = latest.get().getVersionNo();
+                state = latest.get().isLate() ? "LATE" : "SUBMITTED";
+            }
+            long hours = Duration.between(now, a.getDueAt()).toHours();
+            // 미제출 과제이거나 마감 48시간 이내인 과제
+            if (versions == 0 || hours <= 48) {
+                result.add(new StudentDashboardAssignment(a.getId(), a.getCourse().getId(), a.getCourse().getName(),
+                        a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(), state, versions, hours));
+            }
+            if (result.size() >= 5) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentDashboardAssignment> recentForStudent(AppUser student) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Assignment> list = assignments.findRecentForStudent(student.getId());
+        List<StudentDashboardAssignment> result = new ArrayList<>();
+        for (Assignment a : list) {
+            int versions = 0;
+            String state = stateOf(a, now);
+            var latest = submissions.findTopByAssignmentIdAndStudentIdOrderByVersionNoDesc(a.getId(), student.getId());
+            if (latest.isPresent()) {
+                versions = latest.get().getVersionNo();
+                state = latest.get().isLate() ? "LATE" : "SUBMITTED";
+            }
+            long hours = Duration.between(now, a.getDueAt()).toHours();
+            result.add(new StudentDashboardAssignment(a.getId(), a.getCourse().getId(), a.getCourse().getName(),
+                    a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(), state, versions, hours));
+            if (result.size() >= 5) {
+                break;
+            }
+        }
+        return result;
     }
 
     static String stateOf(Assignment a, LocalDateTime now) {

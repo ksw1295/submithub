@@ -326,6 +326,7 @@ public class DemoDataLoader implements ApplicationRunner {
         Submission ragV1 = submit(aAi, s1, 1, "1차 제출: 대학 규정 RAG 챗봇 기본 파이프라인 구현",
                 at(now, -2, 14, 0),
                 "ksw1295/univ-rag-chatbot", "804a610d40c1a5f101065ae5104af92fe4443736",
+                "feature/rag-pipeline",
                 files("src/ask.py", DemoCode.RAG_V1_ASK,
                         "src/llm.py", DemoCode.RAG_V1_LLM,
                         "README.md", DemoCode.RAG_README));
@@ -356,6 +357,7 @@ public class DemoDataLoader implements ApplicationRunner {
         Submission ragV2 = submit(aAi, s1, 2, "2차 제출 (리뷰 반영): common.py 경로 공통화, 모델 싱글톤 캐싱, gemini-2.0-flash 및 Streamlit Secrets 지원",
                 at(now, -1, 17, 30),
                 "ksw1295/univ-rag-chatbot", "fa3aa03e694db87a603315ccf3aca06c999106ee",
+                "feature/rag-pipeline",
                 files("src/ask.py", DemoCode.RAG_V2_ASK,
                         "src/llm.py", DemoCode.RAG_V2_LLM,
                         "src/common.py", DemoCode.RAG_V2_COMMON,
@@ -367,10 +369,11 @@ public class DemoDataLoader implements ApplicationRunner {
         teamMembers.save(new TeamMember(team1, s3, "feature/streamlit-ui", "Streamlit 웹 대시보드 인터페이스"));
         teamMembers.save(new TeamMember(team1, s4, "feature/rest-api", "FastAPI 규정 검색 API 서버"));
 
-        // 최지호(student3) 1차 제출
+        // 최지호(student3) 1차 제출 (불일치 사례: 본인 브랜치 feature/streamlit-ui 대신 feature/rag-pipeline 으로 제출)
         Submission ragS3 = submit(aAi, s3, 1, "1차 제출: 대학 규정 질의응답 웹 인터페이스",
                 at(now, -1, 20, 0),
                 "ksw1295/univ-rag-chatbot", "7953452f1437bb96f86236b28dd4f19b16ea9825",
+                "feature/rag-pipeline",
                 files("src/ask.py", DemoCode.disguised(DemoCode.RAG_V1_ASK), "README.md", DemoCode.RAG_README));
         grade(ragS3, prof2, 85, "UI 레이아웃이 깔끔하고 질문/답변 흐름이 직관적입니다.");
 
@@ -409,9 +412,14 @@ public class DemoDataLoader implements ApplicationRunner {
 
     private Submission submit(Assignment a, User student, int version, String message, LocalDateTime at,
                               String sourceRepo, String sourceCommit, Map<String, String> files) {
+        return submit(a, student, version, message, at, sourceRepo, sourceCommit, null, files);
+    }
+
+    private Submission submit(Assignment a, User student, int version, String message, LocalDateTime at,
+                              String sourceRepo, String sourceCommit, String sourceRef, Map<String, String> files) {
         Submission s = new Submission(a, student, version, message, at.isAfter(a.getDueAt()), at);
         if (sourceRepo != null && sourceCommit != null) {
-            s.setSource(sourceRepo, sourceCommit, null);   // 시연 데이터는 어느 브랜치에서 냈는지 기록하지 않는다 (감사 화면에 "브랜치 확인 불가")
+            s.setSource(sourceRepo, sourceCommit, sourceRef);
         }
         files.forEach((path, text) -> {
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);

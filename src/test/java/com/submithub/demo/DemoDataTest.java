@@ -229,19 +229,21 @@ class DemoDataTest {
         assertThat(report.totalValidCodeLines()).isGreaterThan(100);
         assertThat(report.members()).hasSize(3);
 
-        // 팀장 이민준 (핵심 주도 기여, 2회 제출, 100% 반영률)
+        // 팀장 이민준 (핵심 주도 기여, 2회 제출, 100% 반영률, 본인 브랜치 일치)
         var s1Audit = report.members().stream().filter(m -> m.loginId().equals("student1")).findFirst().orElseThrow();
         assertThat(s1Audit.leader()).isTrue();
         assertThat(s1Audit.branchName()).isEqualTo("feature/rag-pipeline");
         assertThat(s1Audit.versionCount()).isEqualTo(2);
         assertThat(s1Audit.feedbackRatePercent()).isEqualTo(100);
         assertThat(s1Audit.contributionPercent()).isGreaterThan(30);
+        assertThat(s1Audit.branchStatus()).isEqualTo("브랜치 일치 ✔");
 
-        // 최지호 (정상 균형 기여, 1회 제출)
+        // 최지호 (정상 균형 기여, 1회 제출, 불일치 브랜치 제출)
         var s3Audit = report.members().stream().filter(m -> m.loginId().equals("student3")).findFirst().orElseThrow();
         assertThat(s3Audit.branchName()).isEqualTo("feature/streamlit-ui");
         assertThat(s3Audit.versionCount()).isEqualTo(1);
         assertThat(s3Audit.score()).isEqualTo(85);
+        assertThat(s3Audit.branchStatus()).isEqualTo("브랜치 불일치 ✖");
 
         // 정하은 (미제출 상태 - 활동 없음 감지)
         var s4Audit = report.members().stream().filter(m -> m.loginId().equals("student4")).findFirst().orElseThrow();

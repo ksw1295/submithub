@@ -314,5 +314,21 @@ class PagesRenderTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("브랜치 기여도 감사")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("팀원별 실질 유효 코드 점유율")));
+
+        // 팀원(stu)에게는 과제 상세 화면에 "내 브랜치 최신 커밋 제출" 버튼 표시
+        mvc.perform(get("/assignments/" + assignment.getId()).with(user(stu)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("내 브랜치 최신 커밋 제출")));
+
+        // 팀에 참여하지 않은 다른 수강생에게는 "팀 저장소와 브랜치를 먼저 등록하세요" 안내 표시
+        AppUser classmate = data.student();
+        courseService.join(classmate, course.getInviteCode());
+        mvc.perform(get("/assignments/" + assignment.getId()).with(user(classmate)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("팀 저장소와 브랜치를 먼저 등록하세요")));
+
+        // 팀원이 아닌 학생이 POST /assignments/{id}/submit/my-branch 시 403 Forbidden
+        mvc.perform(post("/assignments/" + assignment.getId() + "/submit/my-branch").with(user(classmate)).with(csrf()))
+                .andExpect(status().isForbidden());
     }
 }

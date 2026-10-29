@@ -9,6 +9,8 @@ import com.submithub.domain.EnrollmentRepository;
 import com.submithub.domain.Submission;
 import com.submithub.domain.SubmissionFile;
 import com.submithub.domain.SubmissionRepository;
+import com.submithub.domain.Team;
+import com.submithub.domain.TeamMember;
 import com.submithub.domain.User;
 import com.submithub.domain.UserRepository;
 import com.submithub.security.AppUser;
@@ -97,13 +99,15 @@ public class SubmissionService {
     private final AiJudgeService aiJudge;
     private final GradingService grading;
     private final GitHubFetcher github;
+    private final TeamService teamService;
     private final TransactionTemplate tx;
 
     public SubmissionService(SubmissionRepository submissions, AssignmentRepository assignments,
                              EnrollmentRepository enrollments, UserRepository users, AccessService access,
                              UploadProcessor processor, FileStorage storage, ReviewService reviews,
                              GradeService grades, FeedbackService feedback, AiJudgeService aiJudge,
-                             GradingService grading, GitHubFetcher github, PlatformTransactionManager txManager) {
+                             GradingService grading, GitHubFetcher github, TeamService teamService,
+                             PlatformTransactionManager txManager) {
         this.submissions = submissions;
         this.assignments = assignments;
         this.enrollments = enrollments;
@@ -117,6 +121,7 @@ public class SubmissionService {
         this.aiJudge = aiJudge;
         this.grading = grading;
         this.github = github;
+        this.teamService = teamService;
         this.tx = new TransactionTemplate(txManager);
     }
 
@@ -166,6 +171,33 @@ public class SubmissionService {
         List<Prepared> prepared = prepare(github.files(ref, commit.sha()));
         String memo = userMemo != null && !userMemo.isEmpty() ? userMemo : commitTitle(commit.message());
         return commit(assignmentId, student, prepared, memo, ref.fullName(), commit.sha(), ref.ref());
+    }
+
+    /**
+     * 조별 과제에서 본인 팀의 저장소 및 등록된 본인 브랜치에서 최신 커밋을 가져와 제출한다.
+     */
+    public SubmitResult submitFromMyBranch(Long assignmentId, AppUser student, String message) {
+        if (student.isProfessor()) {
+            throw new ForbiddenException("학생만 제출할 수 있습니다.");
+        }
+        Assignment assignment = access.assignment(assignmentId, student);
+        if (!assignment.isTeamProject()) {
+            throw new IllegalStateException("조별 과제가 아닙니다.");
+        }
+        Team team = teamService.getMyTeam(assignmentId, student.getId())
+                .orElseThrow(() -> new ForbiddenException("팀에 속해 있지 않습니다."));
+        TeamMember member = team.getMembers().stream()
+                .filter(m -> m.getStudent().getId().equals(student.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ForbiddenException("팀에 속해 있지 않습니다."));
+
+        String repoUrl = team.getRepoUrl();
+        String branch = member.getBranchName();
+        if (repoUrl == null || repoUrl.isBlank() || branch == null || branch.isBlank()) {
+            throw new BusinessException("팀 저장소와 브랜치를 먼저 등록하세요.");
+        }
+
+        return submitFromGitHub(assignmentId, student, repoUrl, branch, message);
     }
 
     static String commitTitle(String commitMessage) {

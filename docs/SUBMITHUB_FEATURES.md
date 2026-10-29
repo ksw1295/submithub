@@ -17,7 +17,7 @@ SubmitHub는 컴퓨터공학 및 소프트웨어 교육 현장을 위해 개발�
 | **피드백 반영 자동 추적**<br>*(주요 기능 1)* | • 새 버전 제출 시 이전 피드백의 수정 여부 **자동 Diff 트래킹**<br>• 상태 판정: 🟢 반영됨(Resolved), 🔴 미반영(Unresolved), ⚪ 줄 삭제(Deleted)<br>• 버전별 피드백 해소율(%) 및 교수 피드백 통계 카드 | Git Diff Line Tracking Service (`LineTracker`) | 교수, 학생 |
 | **표절 검사**<br>*(주요 기능 2)* | • **토큰 기반 Winnowing 표절 검사** (MOSS와 같은 Winnowing 방식)<br>• 식별자 정규화, 주석, 공백 무시 토큰화 (`CodeTokenizer`)<br>• 교수 뼈대 코드 제외 필터링<br>• 의심 쌍 나란히 비교(Side-by-Side) 및 겹치는 토큰 하이라이트 | Custom Tokenizer, Winnowing Algorithm, SimilarityChecker | 교수 |
 | **격리 자동 채점** | • 입력값 $\to$ 기대 출력값 단위 테스트케이스 등록 (공개/비공개)<br>• Java(javac/java) 및 Python3 샌드박스 컴파일 및 실행<br>• 시간 초과(Timeout) 및 메모리 제한 제어 | Docker Container Execution / Fallback Local Runner | 교수, 학생 |
-| **조별 과제 & 기여도 지표**<br>*(주요 기능 3)* | • 조별 과제 활성화 및 최대 팀원 수 제한 설정<br>• 팀 생성, 조원 가입, 팀 리포지토리 지정<br>• **조원별 개인 개발 브랜치 매핑**<br>• `CodeTokenizer` 기반 실질 유효 코드 라인(LoC) 집계 및 기여율 산출<br>• **활동 저조(확인 필요) 감지 배지 및 동료 코드 중복(70% 이상) 경고**<br>• Chart.js 기반 제출 참고 지표 대시보드 | TeamAuditService, Chart.js, Pessimistic Lock | 교수, 학생 |
+| **조별 과제 & 기여도 지표**<br>*(주요 기능 3)* | • 조별 과제 활성화 및 최대 팀원 수 제한 설정<br>• 팀 생성, 조원 가입, 팀 리포지토리 지정<br>• **조원별 개인 개발 브랜치 매핑**<br>• **내 브랜치 최신 커밋 원클릭 제출 (팀 저장소 + 담당 브랜치 자동 연동)**<br>• `CodeTokenizer` 기반 실질 유효 코드 라인(LoC) 집계 및 기여율 산출<br>• **활동 저조(확인 필요) 감지 배지 및 동료 코드 중복(70% 이상) 경고**<br>• Chart.js 기반 제출 참고 지표 대시보드 | TeamAuditService, SubmissionService, Chart.js, Pessimistic Lock | 교수, 학생 |
 | **통계 및 대시보드** | • 과제별 제출률, 정시/지각/미제출 현황<br>• 마감 직전 24시간 제출 집중도 분석<br>• 시간대별 제출 분포 및 학생별 평균 반영률 | Chart.js, Spring Data JPA Aggregation | 교수 |
 
 ---
@@ -79,10 +79,42 @@ flowchart TD
 - 타임아웃 및 메모리 한도를 적용하여 무한 루프나 유해 시스템 콜을 방지합니다.
 - Docker가 없는 환경에서는 로컬 프로세스 폴백(Fallback) 모드를 지원합니다.
 
-### 3.5. 조별 과제 및 브랜치별 활동 감사 (Team Project & Branch Audit)
-- 조별 과제에서 팀원별 역할 분담과 활동량을 파악할 수 있도록 **제출 기반 참고 지표**를 제공합니다.
-- 팀 레포지토리와 팀원별 작업 브랜치(`branchName`)를 등록받아, `CodeTokenizer`로 주석·공백·문서를 제외한 유효 코드 라인(LoC), 피드백 반영률, 저장소 일치 여부를 집계합니다.
-- 팀원 간 제출물 중복도가 70% 이상일 경우 코드 중복 경고를 표시하고, 활동 저조 여부를 참고할 수 있는 상태 배지를 제공합니다.
+### 3.5. 조별 과제 및 브랜치 활동 감사 (Team Project & Branch Audit)
+
+조별 과제에서 팀원별 역할 분담과 활동량을 파악할 수 있도록 데이터에 기반한 **제출 기반 참고 지표**와 **내 브랜치 원클릭 제출**을 지원합니다.
+
+#### 3.5.1. 도메인 모델 및 동시성 제어
+- `Assignment.teamProject (boolean)`: 조별 과제 여부 및 `maxTeamSize` 지정.
+- `Team`: 조 이름, 팀 GitHub 저장소 주소(`repoUrl`), 조장(`leader`) 관리.
+- `TeamMember`: 조원별 담당 개발 브랜치(`branchName`), 역할(`roleTitle`) 매핑.
+- **무결성 및 동시성 제어**: `UNIQUE(assignment_id, student_id)` 제약으로 과제당 1팀 소속을 DB 차원에서 보장하며, 팀 생성/가입 시 비관적 락(`PESSIMISTIC_WRITE`)으로 최대 인원 초과 레이스 컨디션을 방지합니다.
+
+#### 3.5.2. 유효 코드 라인(LoC) 집계
+- 소스코드 확장자(`.java`, `.py`, `.js`, `.ts`, `.c`, `.h`, `.cpp`, `.hpp`, `.cs`, `.kt`, `.go`, `.rs`, `.rb`, `.php`, `.html`, `.css`, `.sql`)만을 대상으로 집계합니다.
+- `README.md`, 문서, 설정 파일(`.yaml`, `.json` 등)은 코드 줄 집계에서 제외됩니다.
+- 표절 검사 모듈과 동일한 **`CodeTokenizer`**를 재사용하여 토큰이 존재하는 distinct line만을 유효 라인으로 집계합니다 (C 포인터 연산자 `*p = 1;` 보존, 여러 줄 주석 및 파이썬 삼중 따옴표 docstring 내부 라인 제외).
+
+#### 3.5.3. 기여도 점유율 공식 및 배지 판정
+각 팀원 $i$의 기여율 $C_i$ 산출 공식:
+
+$$C_i = \begin{cases} \text{round}\left( \frac{\text{ValidLoC}_i}{\sum_{k=1}^{N} \text{ValidLoC}_k} \times 100 \right) & \text{if } \sum \text{ValidLoC} > 0 \\ 0 & \text{if } \sum \text{ValidLoC} = 0 \end{cases}$$
+
+설정 기준값(`submithub.team.lead-threshold=40`, `submithub.team.low-threshold=15`):
+- **`주도적 핵심 기여`**: $C_i \ge 40\%$ (팀원 3명 이상)
+- **`정상 균형 기여`**: $15\% \le C_i < 40\%$ (2인 팀 균등 분담 포함)
+- **`기여도 저조 (주의)`**: $0\% < C_i < 15\%$ (팀원 2명 이상)
+- **`미제출 (활동 없음)`**: 제출 버전 수 $= 0$
+
+#### 3.5.4. 브랜치 출처 검증 및 팀원 간 코드 중복 감지
+- **출처 검증**: `team.repoUrl` 및 팀원의 `branchName`과 제출물의 `sourceRepo`, `sourceRef`를 대조하여 `브랜치 일치 ✔`, `브랜치 불일치 ✖`, `저장소 불일치 ✖`, `출처 미확인 (직접 업로드)` 배지를 부여합니다.
+- **코드 중복 감지**: `SimilarityChecker.compareAll()`로 팀원 최신 제출물 간 유사도를 비교하여 70% 이상 중복 시 **`⚠️ 코드 중복 의심 (N%)`** 배지를 표시합니다.
+- **협업 종합 상태**: 미제출 또는 활동 저조자가 존재할 경우 `불균형 감지 (활동 저조 — 확인 필요)` 경고를 표출합니다.
+
+#### 3.5.5. "내 브랜치 최신 커밋 제출" 원클릭 워크플로우
+- 조별 과제 상세 화면에서 팀 저장소와 본인 브랜치가 등록된 학생에게 **`내 브랜치 최신 커밋 제출`** 버튼과 선택 메모 입력란을 제공합니다.
+- 클릭 시 별도 URL/브랜치 입력 없이 등록된 팀 저장소 + 본인 브랜치 정보를 기반으로 GitHub REST API 최신 커밋을 즉시 가져와 제출합니다.
+- 서버 측에서 팀 소속 여부(미참여 시 403 Forbidden) 및 브랜치 등록 여부를 검증하며, 기존 GitHub 제출과 동일하게 동일 커밋 재제출 차단("변경 없음"), 마감 기한, 파일 용량/개수 제한을 모두 적용합니다.
+- 팀 미등록 또는 브랜치 미등록 학생에게는 버튼 대신 `팀 저장소와 브랜치를 먼저 등록하세요` 안내와 바로가기 링크를 제공합니다.
 
 ---
 
@@ -97,14 +129,17 @@ flowchart TD
 │   └── /courses/{id}                # 강좌 상세 (과제 목록, 수강생 관리)
 │       ├── /assignments/new         # 과제 생성 (개별/조별, 마감일, 뼈대코드, 테스트케이스)
 │       └── /stats                   # 강좌 통계 대시보드 (교수 전용)
-├── /assignments/{id}                # 과제 상세 (제출 폼, 제출 내역, 피드백 현황)
+├── /assignments/{id}                # 과제 상세 (제출 폼, 내 브랜치 원클릭 제출, 피드백 현황)
+│   ├── /submit                      # 파일/ZIP 다중 업로드 제출
+│   ├── /submit/github               # GitHub 공개 저장소 커밋 제출
+│   ├── /submit/my-branch            # [신규] 내 팀 브랜치 최신 커밋 원클릭 제출 (학생)
 │   ├── /edit                        # 과제 수정 (교수)
 │   ├── /teams                       # 조별 과제 팀 목록 및 팀 생성/참가
 │   └── /similarity                  # 과제 표절 검사 대시보드 (교수)
 │       └── /pairs/{pairId}          # 표절 의심 쌍 비교 상세
 ├── /teams/{id}
 │   ├── /join                        # 팀 참가 (학생)
-│   └── /audit                       # 브랜치별 활동 감사 대시보드 (차트 및 참고 지표)
+│   └── /audit                       # 브랜치별 활동 감사 대시보드 (차트 및 참고 지표, 403 IDOR 방지)
 └── /submissions/{id}                # 제출물 상세 뷰어 (코드 트리, 줄 코멘트, 점수)
     └── /diff                        # 버전 간 Myers Diff 비교 화면
 ```

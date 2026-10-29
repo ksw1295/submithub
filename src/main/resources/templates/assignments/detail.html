@@ -69,8 +69,42 @@
             <div class="card-header"><strong>제출하기</strong></div>
             <div class="card-body">
                 <div class="alert alert-secondary mb-0" th:if="${!assignment.open}">제출 기한이 지났습니다.</div>
+
+                <!-- 조별 과제: 내 브랜치 최신 커밋 제출 또는 미등록 안내 -->
+                <div th:if="${assignment.teamProject and assignment.open}" class="mb-4">
+                    <div th:if="${teamBranch != null and teamBranch.readyToSubmit}" class="card border-primary bg-light-subtle">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-primary">🌿 내 브랜치 최신 커밋 제출</span>
+                                <span class="badge text-bg-primary" th:text="${teamBranch.teamName}">1조</span>
+                            </div>
+                            <div class="small text-muted mb-3">
+                                <span class="me-3">팀 저장소: <code th:text="${teamBranch.repoUrl}">https://github.com/...</code></span>
+                                <span>내 브랜치: <code class="text-success fw-bold" th:text="${teamBranch.branchName}">feature/...</code></span>
+                            </div>
+                            <form th:action="@{/assignments/{id}/submit/my-branch(id=${assignment.id})}" method="post">
+                                <div class="alert alert-warning py-2 mb-2" th:if="${assignment.pastDue}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
+                                <div class="input-group mb-2">
+                                    <input class="form-control" name="message" maxlength="500" placeholder="제출 메모 (선택 입력, 비우면 커밋 메시지 첫 줄)">
+                                    <button class="btn btn-primary" type="submit">내 브랜치 최신 커밋 제출</button>
+                                </div>
+                                <div class="form-text">별도 입력 없이 등록된 팀 저장소 및 본인 브랜치의 최신 커밋을 제출합니다 (감사 화면 브랜치 일치 ✔ 연동).</div>
+                            </form>
+                        </div>
+                    </div>
+                    <div th:unless="${teamBranch != null and teamBranch.readyToSubmit}" class="alert alert-secondary d-flex justify-content-between align-items-center mb-0">
+                        <div>
+                            <span class="fw-semibold">ℹ️ 팀 저장소와 브랜치를 먼저 등록하세요</span>
+                            <div class="small text-muted mt-1">조별 과제는 팀 저장소와 본인 담당 브랜치가 등록되어야 '내 브랜치 최신 커밋 제출'을 사용할 수 있습니다.</div>
+                        </div>
+                        <a class="btn btn-outline-primary btn-sm text-nowrap ms-2" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 / 브랜치 등록 &rarr;</a>
+                    </div>
+                </div>
+
+                <div th:if="${assignment.teamProject and assignment.open}" class="text-muted small fw-semibold mb-3">기타 제출 방식 (직접 파일 업로드 또는 다른 커밋 연동)</div>
+
                 <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit(id=${assignment.id})}" method="post" enctype="multipart/form-data">
-                    <div class="alert alert-warning" th:if="${assignment.pastDue}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
+                    <div class="alert alert-warning" th:if="${assignment.pastDue and !assignment.teamProject}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
                     <div class="mb-3">
                         <label class="form-label" for="files">파일 또는 zip (여러 개 선택 가능)</label>
                         <input class="form-control" type="file" id="files" name="files" multiple required>

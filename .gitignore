@@ -27,5 +27,11 @@ Desktop.ini
 # H2 파일 DB
 /data/
 
+# 문서/발표자료 (PDF, PPTX 등 대용량 산출물은 D:\Dev\Docs\submithub\ 로 분리 관리)
+*.pdf
+*.pptx
+*.docx
+*.hwp
+
 # docker compose 설정
 .env

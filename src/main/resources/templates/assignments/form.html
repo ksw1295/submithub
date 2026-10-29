@@ -84,6 +84,16 @@
                     <form th:if="${hasBaseline}" th:action="@{/assignments/{a}/baseline/delete(a=${assignmentId})}" method="post" class="mt-3 pt-3 border-top">
                         <button class="btn btn-sm btn-outline-danger" type="submit">등록된 뼈대 코드 삭제</button>
                     </form>
+                    <div th:if="${assignmentId != null}" class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <span th:if="${canDelete}">학생 제출물이 없는 과제는 삭제할 수 있습니다.</span>
+                            <span th:unless="${canDelete}" class="text-danger">학생 제출물이 존재하여 삭제할 수 없습니다. (마감일 수정 권장)</span>
+                        </div>
+                        <form th:if="${canDelete}" th:action="@{/assignments/{a}/delete(a=${assignmentId})}" method="post"
+                              onsubmit="return confirm('학생 제출물이 없는 과제입니다. 정말로 이 과제를 삭제하시겠습니까?');">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">과제 삭제</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

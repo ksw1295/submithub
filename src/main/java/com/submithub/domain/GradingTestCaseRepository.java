@@ -8,4 +8,6 @@ public interface GradingTestCaseRepository extends JpaRepository<GradingTestCase
     List<GradingTestCase> findByAssignmentIdOrderByOrderNoAscIdAsc(Long assignmentId);
 
     long countByAssignmentId(Long assignmentId);
+
+    void deleteByAssignmentId(Long assignmentId);
 }

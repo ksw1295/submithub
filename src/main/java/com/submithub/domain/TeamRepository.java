@@ -30,4 +30,6 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     Optional<Team> findByAssignmentIdAndStudentId(@Param("assignmentId") Long assignmentId, @Param("studentId") Long studentId);
 
     boolean existsByAssignmentIdAndName(Long assignmentId, String name);
+
+    void deleteByAssignmentId(Long assignmentId);
 }

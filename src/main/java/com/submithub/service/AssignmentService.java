@@ -4,7 +4,10 @@ import com.submithub.core.text.TextDecoder;
 import com.submithub.domain.Assignment;
 import com.submithub.domain.AssignmentRepository;
 import com.submithub.domain.Course;
+import com.submithub.domain.GradingConfigRepository;
+import com.submithub.domain.GradingTestCaseRepository;
 import com.submithub.domain.SubmissionRepository;
+import com.submithub.domain.TeamRepository;
 import com.submithub.security.AppUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +24,19 @@ public class AssignmentService {
 
     private final AssignmentRepository assignments;
     private final SubmissionRepository submissions;
+    private final GradingTestCaseRepository testCases;
+    private final GradingConfigRepository gradingConfigs;
+    private final TeamRepository teams;
     private final AccessService access;
 
     public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
-                             AccessService access) {
+                             GradingTestCaseRepository testCases, GradingConfigRepository gradingConfigs,
+                             TeamRepository teams, AccessService access) {
         this.assignments = assignments;
         this.submissions = submissions;
+        this.testCases = testCases;
+        this.gradingConfigs = gradingConfigs;
+        this.teams = teams;
         this.access = access;
     }
 
@@ -130,6 +140,25 @@ public class AssignmentService {
     @Transactional(readOnly = true)
     public void requireCourseOwner(Long courseId, AppUser professor) {
         access.courseOfProfessor(courseId, professor);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canDelete(Long assignmentId) {
+        return !submissions.existsByAssignmentId(assignmentId);
+    }
+
+    @Transactional
+    public Long delete(Long assignmentId, AppUser professor) {
+        Assignment a = access.assignmentOfProfessor(assignmentId, professor);
+        if (submissions.existsByAssignmentId(assignmentId)) {
+            throw new BusinessException("학생 제출물이 존재하는 과제는 삭제할 수 없습니다. 대신 마감 기한을 수정해 주세요.");
+        }
+        Long courseId = a.getCourse().getId();
+        testCases.deleteByAssignmentId(assignmentId);
+        gradingConfigs.deleteByAssignmentId(assignmentId);
+        teams.deleteByAssignmentId(assignmentId);
+        assignments.delete(a);
+        return courseId;
     }
 
     @Transactional(readOnly = true)

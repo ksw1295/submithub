@@ -20,6 +20,10 @@
             </a>
             <a class="btn btn-outline-danger btn-sm" th:href="@{/assignments/{id}/similarity(id=${assignment.id})}">표절 검사</a>
             <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/edit(id=${assignment.id})}">수정</a>
+            <form th:if="${canDelete}" th:action="@{/assignments/{id}/delete(id=${assignment.id})}" method="post" class="d-inline"
+                  onsubmit="return confirm('학생 제출물이 없는 과제입니다. 정말로 이 과제를 삭제하시겠습니까?');">
+                <button class="btn btn-outline-danger btn-sm" type="submit">과제 삭제</button>
+            </form>
         </div>
     </div>
 
@@ -106,9 +110,17 @@
                 <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit(id=${assignment.id})}" method="post" enctype="multipart/form-data">
                     <div class="alert alert-warning" th:if="${assignment.pastDue and !assignment.teamProject}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
                     <div class="mb-3">
-                        <label class="form-label" for="files">파일 또는 zip (여러 개 선택 가능)</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0" for="files">파일 또는 zip (여러 개 선택 가능)</label>
+                            <span class="badge text-bg-light border text-secondary" style="font-size: 11.5px;">
+                                최대 10MB (압축 해제 후 개별 파일 5MB, 총 20MB)
+                            </span>
+                        </div>
                         <input class="form-control" type="file" id="files" name="files" multiple required>
-                        <div class="form-text">제출할 때마다 새 버전이 쌓이고, 이전 버전은 그대로 보관됩니다.</div>
+                        <div class="form-text">
+                            <span class="text-primary fw-medium">허용 파일 크기:</span> ZIP 최대 10MB (압축 해제 시 개별 파일 5MB, 총 20MB, 최대 200개 이내).<br>
+                            제출할 때마다 새 버전이 쌓이고, 이전 버전은 그대로 보관됩니다.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="message">제출 메모 <small class="text-muted fw-normal">(커밋 메시지처럼 이번 버전에서 무엇을 바꿨는지)</small></label>

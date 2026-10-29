@@ -26,6 +26,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     long countByAssignmentIdAndStudentId(Long assignmentId, Long studentId);
 
+    boolean existsByAssignmentId(Long assignmentId);
+
+    long countByAssignmentId(Long assignmentId);
+
     /** 통계용: 과제의 모든 제출(모든 학생, 모든 버전) */
     List<Submission> findByAssignmentIdOrderBySubmittedAtAsc(Long assignmentId);
 }

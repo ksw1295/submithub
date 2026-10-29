@@ -87,6 +87,7 @@ public class AssignmentController {
         if (user.isProfessor()) {
             model.addAttribute("status", submissionService.statusFor(id, user));
             model.addAttribute("feedbackByStudent", feedbackService.summaries(id, user));
+            model.addAttribute("canDelete", assignmentService.canDelete(id));
         } else {
             model.addAttribute("history", submissionService.history(id, user.getId(), user));
             model.addAttribute("feedback", feedbackService.forStudent(id, user.getId(), user));
@@ -146,6 +147,7 @@ public class AssignmentController {
         model.addAttribute("courseId", a.getCourse().getId());
         model.addAttribute("assignmentId", id);
         model.addAttribute("hasBaseline", a.getBaselineCode() != null);
+        model.addAttribute("canDelete", assignmentService.canDelete(id));
         return "assignments/form";
     }
 
@@ -158,6 +160,7 @@ public class AssignmentController {
         model.addAttribute("courseId", current.getCourse().getId());
         model.addAttribute("assignmentId", id);
         model.addAttribute("hasBaseline", current.getBaselineCode() != null);
+        model.addAttribute("canDelete", assignmentService.canDelete(id));
         if (result.hasErrors()) {
             return "assignments/form";
         }
@@ -168,6 +171,19 @@ public class AssignmentController {
         } catch (BusinessException e) {
             result.reject("update", e.getMessage());
             return "assignments/form";
+        }
+    }
+
+    @PostMapping("/assignments/{id}/delete")
+    @PreAuthorize("hasRole('PROFESSOR')")
+    public String delete(@PathVariable Long id, @AuthenticationPrincipal AppUser user, RedirectAttributes redirect) {
+        try {
+            Long courseId = assignmentService.delete(id, user);
+            redirect.addFlashAttribute("message", "과제를 삭제했습니다.");
+            return "redirect:/courses/" + courseId;
+        } catch (BusinessException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/assignments/" + id;
         }
     }
 

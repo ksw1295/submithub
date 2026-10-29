@@ -28,6 +28,8 @@ import com.submithub.storage.FileStorage;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -120,15 +122,13 @@ public class GradingService {
     private final FileStorage storage;
     private final AccessService access;
     private final TransactionTemplate tx;
-    private final ExecutorService executor = Executors.newFixedThreadPool(2, r -> {
-        Thread t = new Thread(r, "grading");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService executor;
 
+    @Autowired
     public GradingService(GradingRunner runner, GradingConfigRepository configs, GradingTestCaseRepository cases,
                           GradingRunRepository runs, SubmissionRepository submissions, AssignmentRepository assignments,
-                          FileStorage storage, AccessService access, PlatformTransactionManager txManager) {
+                          FileStorage storage, AccessService access, PlatformTransactionManager txManager,
+                          @Value("${submithub.grading.max-concurrent-runs:2}") int maxConcurrentRuns) {
         this.runner = runner;
         this.configs = configs;
         this.cases = cases;
@@ -138,6 +138,18 @@ public class GradingService {
         this.storage = storage;
         this.access = access;
         this.tx = new TransactionTemplate(txManager);
+        int concurrency = Math.max(1, maxConcurrentRuns);
+        this.executor = Executors.newFixedThreadPool(concurrency, r -> {
+            Thread t = new Thread(r, "grading");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    public GradingService(GradingRunner runner, GradingConfigRepository configs, GradingTestCaseRepository cases,
+                          GradingRunRepository runs, SubmissionRepository submissions, AssignmentRepository assignments,
+                          FileStorage storage, AccessService access, PlatformTransactionManager txManager) {
+        this(runner, configs, cases, runs, submissions, assignments, storage, access, txManager, 2);
     }
 
     @PreDestroy

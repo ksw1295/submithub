@@ -38,6 +38,7 @@ submithub:
   professor-signup-code: ""
   grading:
     work-dir: ${GRADING_WORK_DIR:}
+    max-concurrent-runs: ${GRADING_MAX_CONCURRENT:2}
   max-file-bytes: 5242880
   max-total-bytes: 20971520
   max-files: 200

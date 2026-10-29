@@ -44,6 +44,25 @@ public class TeamService {
         return teams.findByAssignmentIdAndStudentId(assignmentId, studentId);
     }
 
+    public Optional<TeamMember> getMyMember(Long assignmentId, Long studentId) {
+        return getMyTeam(assignmentId, studentId)
+                .flatMap(t -> t.getMembers().stream()
+                        .filter(m -> m.getStudent().getId().equals(studentId))
+                        .findFirst());
+    }
+
+    public TeamBranchInfo getTeamBranchInfo(Long assignmentId, Long studentId) {
+        return getMyTeam(assignmentId, studentId)
+                .map(team -> {
+                    TeamMember member = team.getMembers().stream()
+                            .filter(m -> m.getStudent().getId().equals(studentId))
+                            .findFirst()
+                            .orElse(null);
+                    return TeamBranchInfo.of(team, member);
+                })
+                .orElse(TeamBranchInfo.none());
+    }
+
     @Transactional
     public Team createTeam(Long assignmentId, String name, String repoUrl, Long leaderId,
                            String leaderBranch, String leaderRole) {

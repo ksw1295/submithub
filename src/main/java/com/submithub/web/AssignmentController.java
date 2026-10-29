@@ -61,18 +61,22 @@ public class AssignmentController {
     private final SubmissionService submissionService;
     private final FeedbackService feedbackService;
     private final GradingService gradingService;
+    private final com.submithub.service.TeamService teamService;
 
     public AssignmentController(AssignmentService assignmentService, SubmissionService submissionService,
-                                FeedbackService feedbackService, GradingService gradingService) {
+                                FeedbackService feedbackService, GradingService gradingService,
+                                com.submithub.service.TeamService teamService) {
         this.assignmentService = assignmentService;
         this.submissionService = submissionService;
         this.feedbackService = feedbackService;
         this.gradingService = gradingService;
+        this.teamService = teamService;
     }
 
     @GetMapping("/assignments/{id}")
     public String detail(@PathVariable Long id, @AuthenticationPrincipal AppUser user, Model model) {
-        model.addAttribute("assignment", assignmentService.view(id, user));
+        var assignment = assignmentService.view(id, user);
+        model.addAttribute("assignment", assignment);
         model.addAttribute("autoGrading", gradingService.configured(id));
         if (user.isProfessor()) {
             model.addAttribute("status", submissionService.statusFor(id, user));
@@ -81,6 +85,9 @@ public class AssignmentController {
             model.addAttribute("history", submissionService.history(id, user.getId(), user));
             model.addAttribute("feedback", feedbackService.forStudent(id, user.getId(), user));
             model.addAttribute("trend", gradingService.trend(id, user.getId(), user));
+            if (assignment.teamProject()) {
+                model.addAttribute("teamBranch", teamService.getTeamBranchInfo(id, user.getId()));
+            }
         }
         return "assignments/detail";
     }

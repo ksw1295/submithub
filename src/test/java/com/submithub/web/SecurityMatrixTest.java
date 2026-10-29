@@ -175,6 +175,9 @@ class SecurityMatrixTest {
                             .file(new MockMultipartFile("files", "A.java", "text/plain", "x".getBytes(StandardCharsets.UTF_8)))
                             .with(user(who)).with(csrf()))
                     .andExpect(status().isForbidden());
+            mvc.perform(post("/assignments/" + assignment.getId() + "/submit/my-branch")
+                            .with(user(who)).with(csrf()))
+                    .andExpect(status().isForbidden());
         }
         assertThat(submissionService.history(assignment.getId(), outsider.getId(), prof).versions()).isEmpty();
     }

@@ -22,6 +22,7 @@ class CourseAssignmentServiceTest {
     @Autowired TestData data;
     @Autowired CourseService courseService;
     @Autowired AssignmentService assignmentService;
+    @Autowired SimilarityService similarityService;
 
     @Test
     void 강의를_개설하면_초대코드가_발급된다() {
@@ -187,5 +188,36 @@ class CourseAssignmentServiceTest {
         assertThat(AssignmentService.stateOf(closed, now)).isEqualTo("CLOSED");
         assertThat(lateOpen.isOpen(now)).isTrue();
         assertThat(lateExpired.isOpen(now)).isFalse();
+    }
+
+    @Test
+    void 표절검사_실행후_제출물없는_과제_정상삭제() {
+        AppUser prof = data.professor();
+        Course course = data.course(prof);
+        Assignment a = data.assignment(course, prof, Duration.ofDays(7), false, null);
+
+        // 제출물이 없는 상태에서 표절 검사 실행 -> SimilarityRun 생성됨
+        similarityService.run(a.getId(), 0.5, prof);
+
+        // 과제 삭제 시 FK 제약조건 오류 없이 정상 삭제되어야 함
+        Long courseId = assignmentService.delete(a.getId(), prof);
+        assertThat(courseId).isEqualTo(course.getId());
+    }
+
+    @Test
+    void 마감임박_미제출_48시간_이내_과제만_포함() {
+        AppUser prof = data.professor();
+        AppUser student = data.student();
+        Course course = data.course(prof);
+        courseService.join(student, course.getInviteCode());
+
+        // 1) 36일 뒤 마감 과제 (마감 임박 아님)
+        data.assignment(course, prof, Duration.ofDays(36), false, null);
+        // 2) 10시간 뒤 마감 과제 (마감 임박 맞음)
+        Assignment soon = data.assignment(course, prof, Duration.ofHours(10), false, null);
+
+        var list = assignmentService.dueSoonForStudent(student);
+        assertThat(list).extracting(AssignmentService.StudentDashboardAssignment::id)
+                .containsExactly(soon.getId());
     }
 }

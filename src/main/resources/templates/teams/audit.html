@@ -35,7 +35,7 @@
     </div>
 
     <!-- 협업 건전성 알림 카드 -->
-    <div class="alert shadow-sm mb-4" th:classappend="${report.collaborationClass == 'badge-warning'} ? 'alert-warning border-warning' : 'alert-success border-success'">
+    <div class="alert shadow-sm mb-4" th:classappend="${report.collaborationClass == 'text-bg-warning' or report.collaborationClass == 'badge-warning'} ? 'alert-warning border-warning' : 'alert-success border-success'">
         <div class="d-flex align-items-center gap-2">
             <strong th:text="${report.collaborationStatus}">상태</strong> &mdash; 
             <span th:text="${report.collaborationSummary}">요약 설명</span>
@@ -171,7 +171,7 @@
     </div>
 
     <!-- Chart.js 스크립트 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script th:src="@{/webjars/chart.js/4.4.3/dist/chart.umd.js}"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
         const membersData = /*[[${report.members}]]*/ [];

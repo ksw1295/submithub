@@ -3,7 +3,9 @@ package com.submithub.web;
 import com.submithub.domain.Assignment;
 import com.submithub.domain.Course;
 import com.submithub.domain.Team;
+import com.submithub.domain.TeamMember;
 import com.submithub.security.AppUser;
+import com.submithub.service.AccessService;
 import com.submithub.service.AssignmentService;
 import com.submithub.service.NotFoundException;
 import com.submithub.service.TeamAuditService;
@@ -47,11 +49,14 @@ public class TeamController {
     private final TeamService teamService;
     private final TeamAuditService auditService;
     private final AssignmentService assignmentService;
+    private final AccessService accessService;
 
-    public TeamController(TeamService teamService, TeamAuditService auditService, AssignmentService assignmentService) {
+    public TeamController(TeamService teamService, TeamAuditService auditService,
+                          AssignmentService assignmentService, AccessService accessService) {
         this.teamService = teamService;
         this.auditService = auditService;
         this.assignmentService = assignmentService;
+        this.accessService = accessService;
     }
 
     @GetMapping("/assignments/{assignmentId}/teams")
@@ -63,11 +68,15 @@ public class TeamController {
         Course course = assignment.getCourse();
         List<Team> teams = teamService.getTeams(assignmentId);
         Team myTeam = user.isProfessor() ? null : teamService.getMyTeam(assignmentId, user.getId()).orElse(null);
+        TeamMember myMember = (user != null && !user.isProfessor())
+                ? teamService.getMyMember(assignmentId, user.getId()).orElse(null)
+                : null;
 
         model.addAttribute("assignment", assignment);
         model.addAttribute("course", course);
         model.addAttribute("teams", teams);
         model.addAttribute("myTeam", myTeam);
+        model.addAttribute("myMember", myMember);
         model.addAttribute("createTeamForm", new CreateTeamForm());
         model.addAttribute("joinTeamForm", new JoinTeamForm());
         return "teams/list";
@@ -118,6 +127,25 @@ public class TeamController {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:" + fallbackUrl;
+    }
+
+    @PostMapping("/teams/{teamId}/members/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public String updateMyMember(@PathVariable Long teamId,
+                                 @RequestParam(required = false) String branchName,
+                                 @RequestParam(required = false) String roleTitle,
+                                 @AuthenticationPrincipal AppUser user,
+                                 RedirectAttributes ra) {
+        Team team = teamService.getTeam(teamId)
+                .orElseThrow(() -> new NotFoundException("팀을 찾을 수 없습니다: " + teamId));
+        accessService.course(team.getAssignment().getCourse().getId(), user);
+        try {
+            teamService.updateMember(teamId, user.getId(), branchName, roleTitle);
+            ra.addFlashAttribute("successMessage", "내 담당 브랜치 및 역할 정보가 성공적으로 수정되었습니다.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/assignments/" + team.getAssignment().getId() + "/teams";
     }
 
     @GetMapping("/teams/{teamId}/audit")

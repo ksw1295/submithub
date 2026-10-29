@@ -43,7 +43,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     send429(request, response, "너무 많은 로그인 시도가 발생했습니다. 잠시 후 다시 시도해 주세요.");
                     return;
                 }
-            } else if (uri.matches("^/assignments/\\d+/submit(/github)?$")) {
+            } else if (uri.matches("^/assignments/\\d+/submit(/github|/my-branch)?$")) {
                 // 2) 제출(파일, GitHub): 계정당 1분 limit
                 String userKey = getUserKey(request);
                 int limit = properties.rateLimit().submitPerMinute();

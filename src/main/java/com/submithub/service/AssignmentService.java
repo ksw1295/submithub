@@ -6,6 +6,8 @@ import com.submithub.domain.AssignmentRepository;
 import com.submithub.domain.Course;
 import com.submithub.domain.GradingConfigRepository;
 import com.submithub.domain.GradingTestCaseRepository;
+import com.submithub.domain.SimilarityPairRepository;
+import com.submithub.domain.SimilarityRunRepository;
 import com.submithub.domain.SubmissionRepository;
 import com.submithub.domain.TeamRepository;
 import com.submithub.security.AppUser;
@@ -27,16 +29,21 @@ public class AssignmentService {
     private final SubmissionRepository submissions;
     private final GradingTestCaseRepository testCases;
     private final GradingConfigRepository gradingConfigs;
+    private final SimilarityPairRepository similarityPairs;
+    private final SimilarityRunRepository similarityRuns;
     private final TeamRepository teams;
     private final AccessService access;
 
     public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
                              GradingTestCaseRepository testCases, GradingConfigRepository gradingConfigs,
+                             SimilarityPairRepository similarityPairs, SimilarityRunRepository similarityRuns,
                              TeamRepository teams, AccessService access) {
         this.assignments = assignments;
         this.submissions = submissions;
         this.testCases = testCases;
         this.gradingConfigs = gradingConfigs;
+        this.similarityPairs = similarityPairs;
+        this.similarityRuns = similarityRuns;
         this.teams = teams;
         this.access = access;
     }
@@ -126,8 +133,8 @@ public class AssignmentService {
                 state = latest.get().isLate() ? "LATE" : "SUBMITTED";
             }
             long hours = Duration.between(now, a.getDueAt()).toHours();
-            // 미제출 과제이거나 마감 48시간 이내인 과제
-            if (versions == 0 || hours <= 48) {
+            // 미제출이면서 마감 48시간 이내인 과제만 마감 임박으로 분류
+            if (versions == 0 && hours >= 0 && hours <= 48) {
                 result.add(new StudentDashboardAssignment(a.getId(), a.getCourse().getId(), a.getCourse().getName(),
                         a.getTitle(), a.getDueAt(), a.isAllowLate(), a.getLateUntil(), state, versions, hours));
             }
@@ -217,6 +224,8 @@ public class AssignmentService {
             throw new BusinessException("학생 제출물이 존재하는 과제는 삭제할 수 없습니다. 대신 마감 기한을 수정해 주세요.");
         }
         Long courseId = a.getCourse().getId();
+        similarityPairs.deleteByAssignmentId(assignmentId);
+        similarityRuns.deleteByAssignmentId(assignmentId);
         testCases.deleteByAssignmentId(assignmentId);
         gradingConfigs.deleteByAssignmentId(assignmentId);
         teams.deleteByAssignmentId(assignmentId);

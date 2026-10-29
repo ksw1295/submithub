@@ -175,7 +175,7 @@ public class TeamAuditService {
                 // P2-1: 브랜치/저장소 일치 검사
                 if (!latest.fromGitHub()) {
                     branchStatus = "출처 미확인 (직접 업로드)";
-                    branchStatusClass = "badge-secondary";
+                    branchStatusClass = "text-bg-secondary";
                 } else {
                     String subRepo = normalizeRepo(latest.getSourceRepo());
                     String teamRepo = normalizeRepo(team.getRepoUrl());
@@ -184,22 +184,22 @@ public class TeamAuditService {
                         if (ref == null || ref.isBlank() || "HEAD".equals(ref) || GitHubRepoRef.isSha(ref)) {
                             // SHA 로만 냈거나 기본 브랜치(이름을 모름)로 낸 경우: 어느 브랜치인지 알 수 없다
                             branchStatus = "브랜치 확인 불가";
-                            branchStatusClass = "badge-secondary";
+                            branchStatusClass = "text-bg-secondary";
                         } else if (ref.equals(m.getBranchName())) {
-                            branchStatus = "브랜치 일치 ✔";
-                            branchStatusClass = "badge-success";
+                            branchStatus = "브랜치 일치";
+                            branchStatusClass = "text-bg-success";
                         } else {
-                            branchStatus = "브랜치 불일치 ✖";
-                            branchStatusClass = "badge-danger";
+                            branchStatus = "브랜치 불일치";
+                            branchStatusClass = "text-bg-danger";
                         }
                     } else {
-                        branchStatus = "저장소 불일치 ✖";
-                        branchStatusClass = "badge-danger";
+                        branchStatus = "저장소 불일치";
+                        branchStatusClass = "text-bg-danger";
                     }
                 }
             } else {
                 branchStatus = "미제출";
-                branchStatusClass = "text-muted";
+                branchStatusClass = "text-bg-light text-muted border";
             }
 
             // 학생이 조회할 때 다른 팀원의 점수는 숨긴다 (null)
@@ -226,18 +226,18 @@ public class TeamAuditService {
             String badgeClass;
             if (versionCount == 0) {
                 badge = "미제출 (활동 없음)";
-                badgeClass = "badge-danger";
+                badgeClass = "text-bg-danger";
                 hasImbalance = true;
             } else if (teamMembers.size() >= 2 && contribPercent < lowThreshold) {
                 badge = "기여도 저조 (주의)";
-                badgeClass = "badge-warning";
+                badgeClass = "text-bg-warning";
                 hasImbalance = true;
             } else if (teamMembers.size() >= 3 && contribPercent >= leadThreshold) {
                 badge = "주도적 핵심 기여";
-                badgeClass = "badge-primary";
+                badgeClass = "text-bg-primary";
             } else {
                 badge = "정상 균형 기여";
-                badgeClass = "badge-success";
+                badgeClass = "text-bg-success";
             }
 
             int dupPct = peerDuplicatePercents.getOrDefault(sId, 0);
@@ -278,11 +278,11 @@ public class TeamAuditService {
         // P3-A: 완화된 표현 적용 ("무임승차 의심" -> "활동 저조 — 확인 필요")
         if (hasImbalance) {
             collabStatus = "불균형 감지 (활동 저조 — 확인 필요)";
-            collabClass = "badge-warning";
+            collabClass = "text-bg-warning";
             collabSummary = "특정 팀원의 코드 분량 또는 제출 활동이 저조합니다. 브랜치 활동 이력을 확인하세요.";
         } else {
             collabStatus = "매우 원활 (협업 우수)";
-            collabClass = "badge-success";
+            collabClass = "text-bg-success";
             collabSummary = "모든 팀원이 담당 브랜치에서 균형 있게 코드를 개발하고 피드백을 충실히 반영하고 있습니다.";
         }
 

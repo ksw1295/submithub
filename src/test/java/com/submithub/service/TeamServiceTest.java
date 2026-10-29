@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
-@Transactional
 @Import(TestData.class)
 class TeamServiceTest {
 
@@ -181,5 +180,49 @@ class TeamServiceTest {
         assertThatThrownBy(() -> teamService.joinTeam(team.getId(), student2.getId(), "feature/..hack", "팀원"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("올바른 브랜치 이름 형식이 아닙니다");
+    }
+
+    @Test
+    void 같은_학생이_두_팀에_동시_가입_시_하나만_성공한다() throws Exception {
+        AppUser sLeader1 = data.student();
+        AppUser sLeader2 = data.student();
+        AppUser candidate = data.student();
+
+        courseService.join(sLeader1, course.getInviteCode());
+        courseService.join(sLeader2, course.getInviteCode());
+        courseService.join(candidate, course.getInviteCode());
+
+        Team teamA = teamService.createTeam(teamAssignment.getId(), "A팀", null, sLeader1.getId(), "main", "팀장");
+        Team teamB = teamService.createTeam(teamAssignment.getId(), "B팀", null, sLeader2.getId(), "main", "팀장");
+
+        int n = 2;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(n);
+        java.util.List<java.util.concurrent.Callable<Boolean>> tasks = java.util.List.of(
+                () -> {
+                    try {
+                        teamService.joinTeam(teamA.getId(), candidate.getId(), "feature/cand", "팀원");
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                },
+                () -> {
+                    try {
+                        teamService.joinTeam(teamB.getId(), candidate.getId(), "feature/cand", "팀원");
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+        );
+
+        java.util.List<Boolean> results = new java.util.ArrayList<>();
+        for (java.util.concurrent.Future<Boolean> f : pool.invokeAll(tasks)) {
+            results.add(f.get());
+        }
+        pool.shutdown();
+
+        // 둘 중 하나만 성공 (true 1개, false 1개)
+        assertThat(results).containsExactlyInAnyOrder(true, false);
     }
 }

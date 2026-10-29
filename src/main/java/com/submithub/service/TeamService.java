@@ -101,12 +101,16 @@ public class TeamService {
                 leaderBranch == null || leaderBranch.isBlank() ? "main" : leaderBranch.trim(),
                 leaderRole == null || leaderRole.isBlank() ? "팀장" : leaderRole.trim());
         team.addMember(leaderMember);
-        return teams.save(team);
+        try {
+            return teams.save(team);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new IllegalStateException("이미 이 과제의 다른 팀에 참여하고 있습니다.");
+        }
     }
 
     @Transactional
     public TeamMember joinTeam(Long teamId, Long studentId, String branchName, String roleTitle) {
-        Team team = teams.findById(teamId)
+        Team team = teams.findByIdForUpdate(teamId)
                 .orElseThrow(() -> new NotFoundException("팀을 찾을 수 없습니다: " + teamId));
         User student = users.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + studentId));
@@ -142,7 +146,11 @@ public class TeamService {
                 branchName == null || branchName.isBlank() ? "feature/" + student.getLoginId() : branchName.trim(),
                 roleTitle == null || roleTitle.isBlank() ? "팀원" : roleTitle.trim());
         team.addMember(member);
-        return members.save(member);
+        try {
+            return members.save(member);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new IllegalStateException("이미 이 과제의 팀에 등록되어 있습니다.");
+        }
     }
 
     @Transactional

@@ -42,6 +42,10 @@ submithub:
   max-total-bytes: 20971520
   max-files: 200
 
+  team:
+    lead-threshold: 40
+    low-threshold: 15
+
   diff:
     max-edit-distance: 5000
 

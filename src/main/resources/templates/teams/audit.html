@@ -24,6 +24,9 @@
                 <a th:if="${team.repoUrl != null and !team.repoUrl.isBlank()}" th:href="${team.repoUrl.startsWith('http') ? team.repoUrl : 'https://github.com/' + team.repoUrl}" target="_blank" th:text="${team.repoUrl}">repo</a>
                 <span th:if="${team.repoUrl == null or team.repoUrl.isBlank()}" class="text-muted">미등록</span>
             </p>
+            <div class="alert alert-light border small text-muted py-1 px-3 mt-2 mb-0">
+                💡 <strong>안내:</strong> 본 화면은 학생의 브랜치 제출물 및 유효 코드 라인 수에 기반한 <strong>제출 기반 참고 지표</strong>를 제공합니다.
+            </div>
         </div>
         <div>
             <a class="btn btn-outline-secondary btn-sm" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">&larr; 팀 목록으로</a>
@@ -101,6 +104,7 @@
                     <th class="text-end">기여율</th>
                     <th class="text-center">피드백 반영률</th>
                     <th class="text-center">점수</th>
+                    <th class="text-center">출처 검증</th>
                     <th class="text-center">기여 판정</th>
                     <th class="text-end">코드 확인</th>
                 </tr>
@@ -142,6 +146,12 @@
                         <span th:if="${m.score == null}" class="text-muted">-</span>
                     </td>
                     <td class="text-center">
+                        <span class="badge" th:classappend="${m.branchStatusClass}" th:text="${m.branchStatus}">저장소 일치</span>
+                        <div th:if="${m.duplicateWarning}" class="mt-1">
+                            <span class="badge bg-danger" th:title="'동료 코드와 ' + ${m.duplicatePercent} + '% 중복'">⚠️ 코드 중복 (<span th:text="${m.duplicatePercent} + '%'"></span>)</span>
+                        </div>
+                    </td>
+                    <td class="text-center">
                         <span class="badge" th:classappend="${m.healthBadgeClass}" th:text="${m.healthBadge}">정상 기여</span>
                     </td>
                     <td class="text-end">
@@ -153,6 +163,9 @@
                 </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="card-footer bg-light text-muted small">
+            * 각 팀원의 기여율은 반올림 처리되어 합계가 100%와 다를 수 있습니다.
         </div>
     </div>
 

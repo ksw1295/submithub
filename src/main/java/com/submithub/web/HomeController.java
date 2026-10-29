@@ -7,16 +7,22 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class HomeController {
 
     @GetMapping("/")
-    public String home(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
+    public String home(Authentication authentication, @RequestParam(value = "landing", required = false) String landing) {
+        if (landing == null && authentication != null && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)) {
             return "redirect:/courses";
         }
+        return "home";
+    }
+
+    @GetMapping("/home")
+    public String homeLanding() {
         return "home";
     }
 

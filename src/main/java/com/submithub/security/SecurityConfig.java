@@ -31,12 +31,12 @@ public class SecurityConfig {
         http
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/signup", "/webjars/**", "/css/**", "/js/**",
+                        .requestMatchers("/", "/home", "/login", "/signup", "/webjars/**", "/css/**", "/js/**",
                                 "/error", "/error/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
+                        .defaultSuccessUrl("/courses", true)
                         .permitAll())
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")

@@ -698,13 +698,21 @@
             </p>
 
             <div class="sh-cta-group">
-                <a th:href="@{/login}" class="sh-btn-primary text-decoration-none">
-                    <span>로그인하고 시작하기</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </a>
-                <a th:href="@{/signup}" class="sh-btn-secondary text-decoration-none">
-                    <span>새 계정 회원가입</span>
-                </a>
+                <th:block sec:authorize="!isAuthenticated()">
+                    <a th:href="@{/login}" class="sh-btn-primary text-decoration-none">
+                        <span>로그인하고 시작하기</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </a>
+                    <a th:href="@{/signup}" class="sh-btn-secondary text-decoration-none">
+                        <span>새 계정 회원가입</span>
+                    </a>
+                </th:block>
+                <th:block sec:authorize="isAuthenticated()">
+                    <a th:href="@{/courses}" class="sh-btn-primary text-decoration-none">
+                        <span>내 강의실 대시보드로 이동</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </a>
+                </th:block>
             </div>
 
             <!-- 3D Perspective IDE Mockup that flattens dynamically on scroll -->

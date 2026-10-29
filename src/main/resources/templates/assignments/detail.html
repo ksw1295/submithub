@@ -67,84 +67,107 @@
         </div>
     </div>
 
-    <!-- 학생: 제출 -->
+    <!-- 학생: 제출 영역 (탭 기반 UX) -->
     <div sec:authorize="hasRole('STUDENT')">
         <div class="card shadow-sm mb-4">
-            <div class="card-header"><strong>제출하기</strong></div>
-            <div class="card-body">
-                <div class="alert alert-secondary mb-0" th:if="${!assignment.open}">제출 기한이 지났습니다.</div>
+            <div class="card-header bg-white pt-3 pb-0 border-bottom">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <strong class="fs-5 text-dark">📤 과제 제출</strong>
+                    <span class="badge bg-light text-secondary border">허용: ZIP 최대 10MB · 개별 파일 5MB · 총 20MB</span>
+                </div>
+                <div class="alert alert-secondary py-2 mb-3" th:if="${!assignment.open}">제출 기한이 지났습니다.</div>
 
-                <!-- 조별 과제: 내 브랜치 최신 커밋 제출 또는 미등록 안내 -->
-                <div th:if="${assignment.teamProject and assignment.open}" class="mb-4">
-                    <div th:if="${teamBranch != null and teamBranch.readyToSubmit}" class="card border-primary bg-light-subtle">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-semibold text-primary">🌿 내 브랜치 최신 커밋 제출</span>
-                                <span class="badge text-bg-primary" th:text="${teamBranch.teamName}">1조</span>
-                            </div>
-                            <div class="small text-muted mb-3">
-                                <span class="me-3">팀 저장소: <code th:text="${teamBranch.repoUrl}">https://github.com/...</code></span>
-                                <span>내 브랜치: <code class="text-success fw-bold" th:text="${teamBranch.branchName}">feature/...</code></span>
+                <!-- 제출 방식 선택 탭 -->
+                <ul class="nav nav-tabs border-bottom-0" id="submissionTabs" role="tablist" th:if="${assignment.open}">
+                    <li class="nav-item" role="presentation" th:if="${assignment.teamProject}">
+                        <button class="nav-link active fw-semibold" id="branch-tab" data-bs-toggle="tab" data-bs-target="#tab-branch" type="button" role="tab">
+                            🌿 내 브랜치 원클릭 제출
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" th:classappend="${!assignment.teamProject} ? 'active' : ''"
+                                id="file-tab" data-bs-toggle="tab" data-bs-target="#tab-file" type="button" role="tab">
+                            📁 파일 / ZIP 업로드
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="github-tab" data-bs-toggle="tab" data-bs-target="#tab-github" type="button" role="tab">
+                            🐙 GitHub 커밋으로 제출
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4" th:if="${assignment.open}">
+                <div class="tab-content" id="submissionTabContent">
+                    <!-- 1. 팀 브랜치 제출 탭 -->
+                    <div class="tab-pane fade show active" id="tab-branch" role="tabpanel" th:if="${assignment.teamProject}">
+                        <div th:if="${teamBranch != null and teamBranch.readyToSubmit}" class="p-3 bg-light rounded-3 border border-primary-subtle">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <div>
+                                    <span class="badge text-bg-primary me-1" th:text="${teamBranch.teamName}">1조</span>
+                                    <span class="text-muted small">팀 저장소: <code th:text="${teamBranch.repoUrl}">https://github.com/...</code></span>
+                                </div>
+                                <div>
+                                    <span class="small text-muted">담당 브랜치: </span><code class="text-success fw-bold fs-6" th:text="${teamBranch.branchName}">feature/...</code>
+                                </div>
                             </div>
                             <form th:action="@{/assignments/{id}/submit/my-branch(id=${assignment.id})}" method="post">
                                 <div class="alert alert-warning py-2 mb-2" th:if="${assignment.pastDue}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
                                 <div class="input-group mb-2">
                                     <input class="form-control" name="message" maxlength="500" placeholder="제출 메모 (선택 입력, 비우면 커밋 메시지 첫 줄)">
-                                    <button class="btn btn-primary" type="submit">내 브랜치 최신 커밋 제출</button>
+                                    <button class="btn btn-primary px-3" type="submit">내 브랜치 최신 커밋 제출</button>
                                 </div>
-                                <div class="form-text">별도 입력 없이 등록된 팀 저장소 및 본인 브랜치의 최신 커밋을 제출합니다 (감사 화면 브랜치 일치 ✔ 연동).</div>
+                                <div class="form-text small text-muted">별도 입력 없이 등록된 팀 저장소 및 본인 브랜치의 최신 커밋을 제출합니다 (감사 화면 브랜치 일치 ✔ 연동).</div>
                             </form>
                         </div>
-                    </div>
-                    <div th:unless="${teamBranch != null and teamBranch.readyToSubmit}" class="alert alert-secondary d-flex justify-content-between align-items-center mb-0">
-                        <div>
-                            <span class="fw-semibold">ℹ️ 팀 저장소와 브랜치를 먼저 등록하세요</span>
-                            <div class="small text-muted mt-1">조별 과제는 팀 저장소와 본인 담당 브랜치가 등록되어야 '내 브랜치 최신 커밋 제출'을 사용할 수 있습니다.</div>
+                        <div th:unless="${teamBranch != null and teamBranch.readyToSubmit}" class="alert alert-secondary d-flex justify-content-between align-items-center mb-0">
+                            <div>
+                                <span class="fw-semibold">ℹ️ 팀 저장소와 브랜치를 먼저 등록하세요</span>
+                                <div class="small text-muted mt-1">조별 과제는 팀 저장소와 본인 담당 브랜치가 등록되어야 '내 브랜치 최신 커밋 제출'을 사용할 수 있습니다.</div>
+                            </div>
+                            <a class="btn btn-outline-primary btn-sm text-nowrap ms-2" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 / 브랜치 등록 &rarr;</a>
                         </div>
-                        <a class="btn btn-outline-primary btn-sm text-nowrap ms-2" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 / 브랜치 등록 &rarr;</a>
+                    </div>
+
+                    <!-- 2. 파일 업로드 탭 -->
+                    <div class="tab-pane fade" th:classappend="${!assignment.teamProject} ? 'show active' : ''" id="tab-file" role="tabpanel">
+                        <form th:action="@{/assignments/{id}/submit(id=${assignment.id})}" method="post" enctype="multipart/form-data">
+                            <div class="alert alert-warning py-2 mb-3" th:if="${assignment.pastDue and !assignment.teamProject}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold" for="files">제출할 소스 파일 또는 ZIP 파일</label>
+                                <input class="form-control" type="file" id="files" name="files" multiple required>
+                                <div class="form-text small text-muted">제출할 때마다 새 버전(v1, v2...)이 생성되며, 이전 버전은 히스토리에 보존됩니다.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold" for="message">제출 메모 <small class="text-muted fw-normal">(선택 입력)</small></label>
+                                <input class="form-control" id="message" name="message" maxlength="500" placeholder="예: 피드백 반영하여 null 예외 처리 추가">
+                            </div>
+                            <button class="btn btn-primary" type="submit">과제 파일 제출하기</button>
+                        </form>
+                    </div>
+
+                    <!-- 3. GitHub 커밋 연동 탭 -->
+                    <div class="tab-pane fade" id="tab-github" role="tabpanel">
+                        <form th:action="@{/assignments/{id}/submit/github(id=${assignment.id})}" method="post">
+                            <div class="alert alert-warning py-2 mb-3" th:if="${assignment.pastDue}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold small" for="repoUrl">GitHub 공개 저장소 주소</label>
+                                    <input class="form-control" id="repoUrl" name="repoUrl" maxlength="300" placeholder="https://github.com/아이디/저장소" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small" for="ref">브랜치 또는 커밋 SHA</label>
+                                    <input class="form-control" id="ref" name="ref" maxlength="200" placeholder="비우면 기본 브랜치">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small" for="ghMessage">제출 메모 <small class="text-muted fw-normal">(선택 입력, 비우면 커밋 메시지 첫 줄)</small></label>
+                                <input class="form-control" id="ghMessage" name="message" maxlength="500" placeholder="제출 메모">
+                            </div>
+                            <button class="btn btn-outline-secondary" type="submit">GitHub에서 가져와 제출</button>
+                        </form>
                     </div>
                 </div>
-
-                <div th:if="${assignment.teamProject and assignment.open}" class="text-muted small fw-semibold mb-3">기타 제출 방식 (직접 파일 업로드 또는 다른 커밋 연동)</div>
-
-                <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit(id=${assignment.id})}" method="post" enctype="multipart/form-data">
-                    <div class="alert alert-warning" th:if="${assignment.pastDue and !assignment.teamProject}">마감 시간이 지났습니다. 지금 제출하면 <strong>지각 제출</strong>로 기록됩니다.</div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="form-label mb-0" for="files">파일 또는 zip (여러 개 선택 가능)</label>
-                            <span class="badge text-bg-light border text-secondary" style="font-size: 11.5px;">
-                                최대 10MB (압축 해제 후 개별 파일 5MB, 총 20MB)
-                            </span>
-                        </div>
-                        <input class="form-control" type="file" id="files" name="files" multiple required>
-                        <div class="form-text">
-                            <span class="text-primary fw-medium">허용 파일 크기:</span> ZIP 최대 10MB (압축 해제 시 개별 파일 5MB, 총 20MB, 최대 200개 이내).<br>
-                            제출할 때마다 새 버전이 쌓이고, 이전 버전은 그대로 보관됩니다.
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="message">제출 메모 <small class="text-muted fw-normal">(커밋 메시지처럼 이번 버전에서 무엇을 바꿨는지)</small></label>
-                        <input class="form-control" id="message" name="message" maxlength="500" placeholder="예: 리뷰 반영해서 null 체크 추가">
-                    </div>
-                    <button class="btn btn-primary" type="submit">제출</button>
-                </form>
-                <hr class="my-4" th:if="${assignment.open}">
-                <form th:if="${assignment.open}" th:action="@{/assignments/{id}/submit/github(id=${assignment.id})}" method="post">
-                    <div class="fw-semibold mb-2">또는 GitHub 커밋으로 제출</div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-8">
-                            <label class="form-label small mb-1" for="repoUrl">공개 저장소 주소</label>
-                            <input class="form-control" id="repoUrl" name="repoUrl" maxlength="300" placeholder="https://github.com/내아이디/저장소" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small mb-1" for="ref">브랜치 또는 커밋 SHA</label>
-                            <input class="form-control" id="ref" name="ref" maxlength="200" placeholder="비우면 기본 브랜치">
-                        </div>
-                    </div>
-                    <input class="form-control mb-2" name="message" maxlength="500" placeholder="제출 메모 (비우면 커밋 메시지 첫 줄)">
-                    <div class="form-text mb-3">github.com 의 공개 저장소만 가능합니다. 소스 파일(.java, .py, .c 등)만 가져오고, 직전 버전과 같은 커밋은 다시 제출할 수 없습니다.</div>
-                    <button class="btn btn-outline-secondary" type="submit">GitHub 에서 가져와 제출</button>
-                </form>
             </div>
         </div>
 
@@ -163,33 +186,72 @@
         </div>
     </div>
 
-    <!-- 교수: 제출 현황 -->
+    <!-- 교수: 제출 현황 대시보드 -->
     <div sec:authorize="hasRole('PROFESSOR')">
+        <!-- 요약 KPI 통계 카드 -->
+        <div class="row g-2 mb-3 text-center" th:unless="${#lists.isEmpty(status)}">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-light">
+                    <div class="text-muted small mb-1">총 수강생</div>
+                    <div class="fs-4 fw-bold text-dark" th:text="${#lists.size(status)} + '명'">0명</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-success-subtle">
+                    <div class="text-success small fw-semibold mb-1">제출 완료</div>
+                    <div class="fs-4 fw-bold text-success" th:with="done=${#lists.size(status.?[submitted])}"
+                         th:text="${done} + '명 (' + ${(done * 100) / (#lists.isEmpty(status) ? 1 : #lists.size(status))} + '%)'">0명</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-secondary-subtle">
+                    <div class="text-secondary small fw-semibold mb-1">미제출</div>
+                    <div class="fs-4 fw-bold text-secondary" th:with="undone=${#lists.size(status.?[!submitted])}" th:text="${undone} + '명'">0명</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-warning-subtle">
+                    <div class="text-warning-emphasis small fw-semibold mb-1">지각 제출</div>
+                    <div class="fs-4 fw-bold text-warning-emphasis" th:with="lateCount=${#lists.size(status.?[submitted and late])}" th:text="${lateCount} + '명'">0명</div>
+                </div>
+            </div>
+        </div>
+
         <div class="card shadow-sm mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>제출 현황</strong>
-                <span class="text-muted small" th:with="done=${#lists.size(status.?[submitted])}"
-                      th:text="'제출 ' + ${done} + ' / 수강 ' + ${#lists.size(status)} + '명'"></span>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <strong class="fs-5">📋 학생별 제출 현황</strong>
+                    <span class="badge text-bg-light border text-muted small" th:with="done=${#lists.size(status.?[submitted])}"
+                          th:text="'제출 ' + ${done} + ' / 수강 ' + ${#lists.size(status)} + '명'"></span>
+                </div>
+                <!-- 실시간 필터 버튼 그룹 -->
+                <div class="btn-group btn-group-sm" role="group" id="statusFilterGroup" th:unless="${#lists.isEmpty(status)}">
+                    <button type="button" class="btn btn-dark active" onclick="applyFilter('all', this)">전체</button>
+                    <button type="button" class="btn btn-outline-success" onclick="applyFilter('submitted', this)">제출 완료</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="applyFilter('unsubmitted', this)">미제출</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="applyFilter('late', this)">지각</button>
+                </div>
             </div>
             <div class="card-body" th:if="${#lists.isEmpty(status)}"><span class="text-muted">수강생이 없습니다.</span></div>
             <div class="table-responsive" th:unless="${#lists.isEmpty(status)}">
-                <table class="table table-hover mb-0">
-                    <thead><tr><th>학생</th><th>학번</th><th>최신 버전</th><th>제출 시각</th><th>상태</th><th>점수</th><th>피드백 반영</th><th></th></tr></thead>
+                <table class="table table-hover align-middle mb-0" id="submissionStatusTable">
+                    <thead class="table-light"><tr><th>학생</th><th>학번</th><th>최신 버전</th><th>제출 시각</th><th>상태</th><th>점수</th><th>피드백 반영</th><th></th></tr></thead>
                     <tbody>
-                    <tr th:each="s : ${status}">
-                        <td class="fw-medium" th:text="${s.name}">이름</td>
+                    <tr th:each="s : ${status}" class="student-status-row"
+                        th:data-status="${!s.submitted ? 'unsubmitted' : (s.late ? 'late' : 'submitted')}">
+                        <td class="fw-medium text-dark" th:text="${s.name}">이름</td>
                         <td class="text-muted" th:text="${s.studentNo}">학번</td>
-                        <td><span th:if="${s.submitted}" th:text="'v' + ${s.latestVersion} + ' (총 ' + ${s.versions} + '개)'"></span></td>
-                        <td class="text-muted" th:text="${s.submittedAt != null} ? ${#temporals.format(s.submittedAt, 'MM-dd HH:mm')} : ''"></td>
+                        <td><span th:if="${s.submitted}" class="badge bg-secondary-subtle text-secondary" th:text="'v' + ${s.latestVersion} + ' (총 ' + ${s.versions} + '개)'"></span></td>
+                        <td class="text-muted small" th:text="${s.submittedAt != null} ? ${#temporals.format(s.submittedAt, 'MM-dd HH:mm')} : ''"></td>
                         <td>
                             <span class="badge text-bg-secondary" th:unless="${s.submitted}">미제출</span>
                             <span class="badge text-bg-success" th:if="${s.submitted and !s.late}">제출</span>
                             <span class="badge text-bg-warning" th:if="${s.submitted and s.late}">지각</span>
                         </td>
-                        <td><strong th:if="${s.score != null}" th:text="${s.score} + '점'"></strong></td>
+                        <td><strong th:if="${s.score != null}" class="text-primary" th:text="${s.score} + '점'"></strong></td>
                         <td><span th:replace="~{submissions/fragments :: rateCell(${feedbackByStudent.get(s.studentId)})}"></span></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" th:if="${s.submitted}"
+                            <a class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 12.5px;" th:if="${s.submitted}"
                                th:href="@{/assignments/{a}/students/{s}(a=${assignment.id},s=${s.studentId})}">이력 보기</a>
                         </td>
                     </tr>
@@ -198,6 +260,30 @@
             </div>
         </div>
     </div>
+
+    <script sec:authorize="hasRole('PROFESSOR')">
+    function applyFilter(filter, btn) {
+        document.querySelectorAll('#statusFilterGroup button').forEach(b => {
+            b.classList.remove('active', 'btn-dark', 'btn-success', 'btn-secondary', 'btn-warning');
+            b.classList.add(b.dataset.outline || 'btn-outline-secondary');
+        });
+        btn.classList.add('active');
+        if (filter === 'all') btn.classList.add('btn-dark');
+        else if (filter === 'submitted') btn.classList.add('btn-success');
+        else if (filter === 'unsubmitted') btn.classList.add('btn-secondary');
+        else if (filter === 'late') btn.classList.add('btn-warning');
+
+        document.querySelectorAll('.student-status-row').forEach(row => {
+            if (filter === 'all') {
+                row.style.display = '';
+            } else if (filter === 'submitted') {
+                row.style.display = (row.dataset.status === 'submitted' || row.dataset.status === 'late') ? '' : 'none';
+            } else {
+                row.style.display = (row.dataset.status === filter) ? '' : 'none';
+            }
+        });
+    }
+    </script>
 </main>
 </body>
 </html>

@@ -12,7 +12,7 @@
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
-            <h1 class="h3 mb-1">👥 조별 과제 / 팀 관리</h1>
+            <h1 class="h3 mb-1">조별 과제 / 팀 관리</h1>
             <p class="text-muted mb-0" th:text="${assignment.title} + ' 에 등록된 팀 및 브랜치 현황입니다.'"></p>
         </div>
         <div>
@@ -51,7 +51,7 @@
                 </div>
                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
                     <a class="btn btn-primary" th:href="@{/teams/{id}/audit(id=${myTeam.id})}">
-                        📊 우리 팀 기여도 감사 대시보드 &rarr;
+                        우리 팀 기여도 감사 대시보드 &rarr;
                     </a>
                 </div>
             </div>
@@ -137,7 +137,7 @@
                                 <button class="btn btn-outline-success btn-sm" type="submit">팀 참여</button>
                             </form>
                             <a class="btn btn-outline-primary btn-sm" th:href="@{/teams/{id}/audit(id=${t.id})}">
-                                📊 기여도 감사 &rarr;
+                                기여도 감사 &rarr;
                             </a>
                         </div>
                     </td>

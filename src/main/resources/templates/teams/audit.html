@@ -25,7 +25,7 @@
                 <span th:if="${team.repoUrl == null or team.repoUrl.isBlank()}" class="text-muted">미등록</span>
             </p>
             <div class="alert alert-light border small text-muted py-2 px-3 mt-2 mb-0">
-                💡 <strong>감사 안내:</strong> 본 화면은 자동 감점용이 아니며, 각 팀원의 담당 브랜치 활동량 및 무임승차 여부를 확인하기 위한 <strong>교수용 제출 기반 참고 지표(Audit)</strong>입니다.
+                <strong>감사 안내:</strong> 본 화면은 자동 감점용이 아니며, 각 팀원의 담당 브랜치 활동량 및 무임승차 여부를 확인하기 위한 <strong>교수용 제출 기반 참고 지표(Audit)</strong>입니다.
                 개별 기능 브랜치(`feature/...`) 기준으로 작업 분량을 감사하며, 통합 병합(Merge)으로 인한 코드 중복 여부는 우측 '코드 중복 의심' 지표로 구분하여 검토할 수 있습니다.
             </div>
         </div>
@@ -72,7 +72,7 @@
     <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">📊 팀원별 실질 유효 코드 점유율 (%)</div>
+                <div class="card-header fw-bold">팀원별 실질 유효 코드 점유율 (%)</div>
                 <div class="card-body d-flex justify-content-center align-items-center" style="position: relative; min-height: 250px;">
                     <canvas id="contributionChart" style="max-height: 230px;"></canvas>
                 </div>
@@ -80,7 +80,7 @@
         </div>
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">📈 팀원별 피드백 반영률 vs 코드 라인 수</div>
+                <div class="card-header fw-bold">팀원별 피드백 반영률 vs 코드 라인 수</div>
                 <div class="card-body d-flex justify-content-center align-items-center" style="position: relative; min-height: 250px;">
                     <canvas id="feedbackChart" style="max-height: 230px;"></canvas>
                 </div>
@@ -149,7 +149,7 @@
                     <td class="text-center">
                         <span class="badge" th:classappend="${m.branchStatusClass}" th:text="${m.branchStatus}">저장소 일치</span>
                         <div th:if="${m.duplicateWarning}" class="mt-1">
-                            <span class="badge bg-danger" th:title="'동료 코드와 ' + ${m.duplicatePercent} + '% 중복'">⚠️ 코드 중복 (<span th:text="${m.duplicatePercent} + '%'"></span>)</span>
+                            <span class="badge bg-danger" th:title="'동료 코드와 ' + ${m.duplicatePercent} + '% 중복'"><span class="status-dot bg-white me-1"></span>코드 중복 (<span th:text="${m.duplicatePercent} + '%'"></span>)</span>
                         </div>
                     </td>
                     <td class="text-center">

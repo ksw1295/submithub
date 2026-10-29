@@ -61,7 +61,7 @@
     <div sec:authorize="hasRole('STUDENT')" class="mb-4" th:if="${assignment.teamProject}">
         <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                <strong>👥 조별(팀) 프로젝트 과제입니다.</strong> 팀을 만들거나 참여하고 담당 브랜치를 등록하여 기여도를 추적하세요.
+                <strong>조별(팀) 프로젝트 과제입니다.</strong> 팀을 만들거나 참여하고 담당 브랜치를 등록하여 기여도를 추적하세요.
             </div>
             <a class="btn btn-primary btn-sm" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 현황 및 브랜치 관리 &rarr;</a>
         </div>
@@ -72,7 +72,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white pt-3 pb-0 border-bottom">
                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                    <strong class="fs-5 text-dark">📤 과제 제출</strong>
+                    <strong class="fs-5 text-dark">과제 제출</strong>
                     <span class="badge bg-light text-secondary border">허용: ZIP 최대 10MB · 개별 파일 5MB · 총 20MB</span>
                 </div>
                 <div class="alert alert-secondary py-2 mb-3" th:if="${!assignment.open}">제출 기한이 지났습니다.</div>
@@ -81,18 +81,18 @@
                 <ul class="nav nav-tabs border-bottom-0" id="submissionTabs" role="tablist" th:if="${assignment.open}">
                     <li class="nav-item" role="presentation" th:if="${assignment.teamProject}">
                         <button class="nav-link active fw-semibold" id="branch-tab" data-bs-toggle="tab" data-bs-target="#tab-branch" type="button" role="tab">
-                            🌿 내 브랜치 원클릭 제출
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>내 브랜치 원클릭 제출
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-semibold" th:classappend="${!assignment.teamProject} ? 'active' : ''"
                                 id="file-tab" data-bs-toggle="tab" data-bs-target="#tab-file" type="button" role="tab">
-                            📁 파일 / ZIP 업로드
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>파일 / ZIP 업로드
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-semibold" id="github-tab" data-bs-toggle="tab" data-bs-target="#tab-github" type="button" role="tab">
-                            🐙 GitHub 커밋으로 제출
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="me-1"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>GitHub 커밋으로 제출
                         </button>
                     </li>
                 </ul>
@@ -117,12 +117,12 @@
                                     <input class="form-control" name="message" maxlength="500" placeholder="제출 메모 (선택 입력, 비우면 커밋 메시지 첫 줄)">
                                     <button class="btn btn-primary px-3" type="submit">내 브랜치 최신 커밋 제출</button>
                                 </div>
-                                <div class="form-text small text-muted">별도 입력 없이 등록된 팀 저장소 및 본인 브랜치의 최신 커밋을 제출합니다 (감사 화면 브랜치 일치 ✔ 연동).</div>
+                                <div class="form-text small text-muted">별도 입력 없이 등록된 팀 저장소 및 본인 브랜치의 최신 커밋을 제출합니다 (감사 화면 브랜치 일치 여부와 연동).</div>
                             </form>
                         </div>
                         <div th:unless="${teamBranch != null and teamBranch.readyToSubmit}" class="alert alert-secondary d-flex justify-content-between align-items-center mb-0">
                             <div>
-                                <span class="fw-semibold">ℹ️ 팀 저장소와 브랜치를 먼저 등록하세요</span>
+                                <span class="fw-semibold">팀 저장소와 브랜치를 먼저 등록하세요</span>
                                 <div class="small text-muted mt-1">조별 과제는 팀 저장소와 본인 담당 브랜치가 등록되어야 '내 브랜치 최신 커밋 제출'을 사용할 수 있습니다.</div>
                             </div>
                             <a class="btn btn-outline-primary btn-sm text-nowrap ms-2" th:href="@{/assignments/{id}/teams(id=${assignment.id})}">팀 / 브랜치 등록 &rarr;</a>
@@ -220,7 +220,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
                 <div class="d-flex align-items-center gap-2">
-                    <strong class="fs-5">📋 학생별 제출 현황</strong>
+                    <strong class="fs-5">학생별 제출 현황</strong>
                     <span class="badge text-bg-light border text-muted small" th:with="done=${#lists.size(status.?[submitted])}"
                           th:text="'제출 ' + ${done} + ' / 수강 ' + ${#lists.size(status)} + '명'"></span>
                 </div>

@@ -1,7 +1,4 @@
-# 시연 PC 에서 한 줄로 실행:
-#   cp .env.example .env   (처음 한 번, 비밀번호는 원하는 값으로 바꿔도 된다)
-#   docker compose up --build
-# 접속: http://localhost:8080
+# 시연 PC 및 Azure 배포용 Docker Compose
 services:
   db:
     image: mariadb:11
@@ -22,25 +19,75 @@ services:
       timeout: 5s
       retries: 20
 
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CONTAINERS=1
+      - POST=1
+      - INFO=1
+      - VERSION=1
+      - PING=1
+      - BUILD=0
+      - COMMIT=0
+      - CONFIGS=0
+      - DISTRIBUTION=0
+      - EXEC=0
+      - IMAGES=0
+      - NETWORKS=0
+      - NODES=0
+      - PLUGINS=0
+      - SERVICES=0
+      - SESSION=0
+      - SWARM=0
+      - SYSTEM=0
+      - TASKS=0
+      - VOLUMES=0
+      - SECRETS=0
+
+  grading-init:
+    image: alpine:3
+    environment:
+      GRADING_WORK_DIR: /srv/submithub/grading-work
+    command: ["sh", "-c", "mkdir -p \"$$GRADING_WORK_DIR\" && chmod 1777 \"$$GRADING_WORK_DIR\""]
+    volumes:
+      - /srv/submithub/grading-work:/srv/submithub/grading-work
+
   app:
     build: .
+    image: submithub-app:latest
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      socket-proxy:
+        condition: service_started
+      grading-init:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: mariadb
       DB_URL: jdbc:mariadb://db:3306/submithub
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       SUBMITHUB_STORAGE_DIR: /app/uploads
-      # true 이면 DB 가 비어 있을 때 시연용 샘플 데이터를 넣는다 (실제 운영에서는 false)
       SUBMITHUB_DEMO_DATA: ${DEMO_DATA:-true}
       SUBMITHUB_PROFESSOR_SIGNUP_CODE: ${PROFESSOR_SIGNUP_CODE:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DOCKER_HOST: tcp://socket-proxy:2375
+      GRADING_WORK_DIR: /srv/submithub/grading-work
     ports:
       - "8080:8080"
     volumes:
       - uploads:/app/uploads
+      - /srv/submithub/grading-work:/srv/submithub/grading-work
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   db-data:

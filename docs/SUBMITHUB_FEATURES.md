@@ -15,7 +15,7 @@ SubmitHub는 컴퓨터공학 및 소프트웨어 교육 현장을 위해 개발�
 | **코드 뷰어 & 차이 분석** | • 웹 기반 소스코드 트리 및 신택스 하이라이팅<br>• **임의 두 버전 간 Myers Diff 알고리즘 비교**<br>• Side-by-Side (좌우 분할) 및 Unified (통합) 뷰 | Custom Myers Diff Engine, Highlight.js | 교수, 학생 |
 | **인라인 코드 피드백** | • 코드 줄(Line/Range) 단위 인라인 코멘트<br>• 교수-학생 코멘트 스레드(답글)<br>• 학생의 '수정 완료' 체크 기능 | Ajax/REST API, Form POST, Thymeleaf Fragment | 교수, 학생 |
 | **피드백 반영 자동 추적**<br>*(주요 기능 1)* | • 새 버전 제출 시 이전 피드백의 수정 여부 **자동 Diff 트래킹**<br>• 상태 판정: 🟢 반영됨(Resolved), 🔴 미반영(Unresolved), ⚪ 줄 삭제(Deleted)<br>• 버전별 피드백 해소율(%) 및 교수 피드백 통계 카드 | Git Diff Line Tracking Service (`LineTracker`) | 교수, 학생 |
-| **표절 검사**<br>*(주요 기능 2)* | • **토큰 기반 Winnowing 표절 검사** (MOSS와 같은 Winnowing 방식)<br>• 식별자 정규화, 주석, 공백 무시 토큰화 (`CodeTokenizer`)<br>• 교수 뼈대 코드 제외 필터링<br>• 의심 쌍 나란히 비교(Side-by-Side) 및 겹치는 토큰 하이라이트 | Custom Tokenizer, Winnowing Algorithm, SimilarityChecker | 교수 |
+| **표절 검사**<br>*(주요 기능 2)* | • **토큰 기반 Winnowing 표절 검사**<br>• 식별자 정규화, 주석, 공백 무시 토큰화 (`CodeTokenizer`)<br>• 교수 뼈대 코드 제외 필터링<br>• 의심 쌍 나란히 비교(Side-by-Side) 및 겹치는 토큰 하이라이트 | Custom Tokenizer, Winnowing Algorithm, SimilarityChecker | 교수 |
 | **격리 자동 채점** | • 입력값 $\to$ 기대 출력값 단위 테스트케이스 등록 (공개/비공개)<br>• Java(javac/java) 및 Python3 샌드박스 컴파일 및 실행<br>• 시간 초과(Timeout) 및 메모리 제한 제어 | Docker Container Sandbox (No Host Execution Policy) | 교수, 학생 |
 | **조별 과제 & 기여도 지표**<br>*(주요 기능 3)* | • 조별 과제 활성화 및 최대 팀원 수 제한 설정<br>• 팀 생성, 조원 가입, 팀 리포지토리 지정<br>• **조원별 개인 개발 브랜치 매핑**<br>• **내 브랜치 최신 커밋 원클릭 제출 (팀 저장소 + 담당 브랜치 자동 연동)**<br>• `CodeTokenizer` 기반 실질 유효 코드 라인(LoC) 집계 및 기여율 산출<br>• **활동 저조(확인 필요) 감지 배지 및 동료 코드 중복(70% 이상) 경고**<br>• Chart.js 기반 제출 참고 지표 대시보드 | TeamAuditService, SubmissionService, Chart.js, Pessimistic Lock | 교수, 학생 |
 | **통계 및 대시보드** | • 과제별 제출률, 정시/지각/미제출 현황<br>• 마감 직전 24시간 제출 집중도 분석<br>• 시간대별 제출 분포 및 학생별 평균 반영률 | Chart.js, Spring Data JPA Aggregation | 교수 |
@@ -68,7 +68,7 @@ flowchart TD
   - 해당 라인이 포함된 블록 전체가 삭제된 경우: `⚪ 삭제됨 (Deleted)`
 - 학생과 교수 모두에게 해결된 피드백 수 및 비율을 제공합니다.
 
-### 3.3. 토큰 기반 Winnowing 표절 검사 (MOSS와 같은 방식)
+### 3.3. 토큰 기반 Winnowing 표절 검사
 - 제출된 소스코드에서 공백, 주석을 제외하고 식별자를 정규화 토큰으로 치환합니다 (`CodeTokenizer`).
 - K-gram 토큰 슬라이딩 윈도우와 Winnowing 알고리즘을 적용하여 핑거프린트 해시 집합을 생성합니다.
 - 교수가 등록한 **뼈대 코드(Baseline Code)**의 핑거프린트는 검사 대상에서 제외합니다.
@@ -107,7 +107,7 @@ $$C_i = \begin{cases} \text{round}\left( \frac{\text{ValidLoC}_i}{\sum_{k=1}^{N}
 - **`미제출 (활동 없음)`**: 제출 버전 수 $= 0$
 
 #### 3.5.4. 브랜치 출처 검증 및 팀원 간 코드 중복 감지
-- **출처 검증**: `team.repoUrl` 및 팀원의 `branchName`과 제출물의 `sourceRepo`, `sourceRef`를 대조하여 `브랜치 일치 ✔`, `브랜치 불일치 ✖`, `저장소 불일치 ✖`, `출처 미확인 (직접 업로드)` 배지를 부여합니다.
+- **출처 검증**: `team.repoUrl` 및 팀원의 `branchName`과 제출물의 `sourceRepo`, `sourceRef`를 대조하여 `브랜치 일치`, `브랜치 불일치`, `저장소 불일치`, `출처 미확인 (직접 업로드)` 배지를 부여합니다.
 - **코드 중복 감지**: `SimilarityChecker.compareAll()`로 팀원 최신 제출물 간 유사도를 비교하여 70% 이상 중복 시 **`⚠️ 코드 중복 의심 (N%)`** 배지를 표시합니다.
 - **협업 종합 상태**: 미제출 또는 활동 저조자가 존재할 경우 `불균형 감지 (활동 저조 — 확인 필요)` 경고를 표출합니다.
 

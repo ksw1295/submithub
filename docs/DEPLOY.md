@@ -210,9 +210,20 @@ docker compose -f docker-compose.prod.yml logs -f caddy
 ```bash
 cd ~/submithub
 git pull origin main
+export GIT_COMMIT=$(git rev-parse HEAD)   # 이미지에 커밋 해시를 기록
 docker compose -f docker-compose.prod.yml build app
 docker compose -f docker-compose.prod.yml up -d --no-deps app
 ```
+
+**배포된 코드가 GitHub `main` 과 같은지 확인** (서버에서):
+
+```bash
+git -C ~/submithub rev-parse HEAD                      # 서버 작업 폴더의 커밋
+git -C ~/submithub ls-remote origin refs/heads/main        # GitHub main 의 커밋 (위와 같아야 함)
+docker inspect --format '{{index .Config.Labels "git.commit"}}' $(docker compose -f docker-compose.prod.yml ps -q app)   # 실제 실행 중인 이미지의 커밋
+```
+
+세 값이 모두 같으면 배포 완료입니다. 서버 폴더가 `git clone` 으로 받은 것이 아니라(예: zip·scp 로 올림) `git rev-parse` 가 실패하면, 현재 폴더를 `mv ~/submithub ~/submithub.old` 로 치우고 `git clone https://github.com/ksw1295/submithub.git ~/submithub` 로 새로 받은 뒤, 기존 `.env` 와 `logs/` 를 `cp ~/submithub.old/.env ~/submithub/` 처럼 옮기고 위 업데이트 명령을 실행하세요(DB·업로드는 Docker 볼륨에 있어 그대로 유지됩니다). 이후에는 항상 `git pull` 로만 갱신합니다. `GIT_COMMIT` 없이 빌드한 이미지는 라벨이 `unknown` 으로 나오므로 다시 빌드하세요.
 
 ### 7-2. DB 및 업로드 파일 정기 백업 스크립트
 데이터 손실에 대비하여 DB 덤프와 업로드 파일을 정기적으로 백업합니다:

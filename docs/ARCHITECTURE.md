@@ -34,7 +34,7 @@ flowchart TB
     subgraph EngineLayer ["4. 핵심 알고리즘 엔진 (Core Algorithm Engines)"]
         MyersDiff["Myers Diff 알고리즘 (코드 변경/이동 추적)"]
         FeedbackEngine["피드백 반영 자동 판정 엔진 (FeedbackService)"]
-        Winnowing["Winnowing 알고리즘 (MOSS 방식 표절 탐지)"]
+        Winnowing["Winnowing 알고리즘 (토큰 기반 표절 탐지)"]
         AiJudge["Gemini REST AI 판정 보완 엔진 (AiJudgeService)"]
     end
 
@@ -104,7 +104,7 @@ flowchart LR
 
 ---
 
-### 2.3. 표절 검사 (Winnowing / MOSS) 파이프라인
+### 2.3. 표절 검사 (Winnowing) 파이프라인
 학생 간의 변수명 변경, 공백 삽입, 주석 추가 등의 치환 시도를 원천 무력화하고 코드의 구조적 유사도를 측정합니다.
 
 ```mermaid

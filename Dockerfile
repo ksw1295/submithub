@@ -8,6 +8,9 @@ RUN mvn -B -q package -DskipTests
 
 # 2단계: 실행 이미지
 FROM eclipse-temurin:17-jre
+# 이 이미지가 어느 커밋에서 빌드됐는지 기록한다 (docs/DEPLOY.md 7-1 의 배포 버전 확인)
+ARG GIT_COMMIT=unknown
+LABEL git.commit=$GIT_COMMIT
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 COPY --from=docker:cli /usr/local/bin/docker /usr/local/bin/docker

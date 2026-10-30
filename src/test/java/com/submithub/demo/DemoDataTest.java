@@ -110,9 +110,9 @@ class DemoDataTest {
         var top = run.pairs().get(0);
         assertThat(java.util.Set.of(top.studentA(), top.studentB())).containsExactlyInAnyOrder("박서연", "최지호");
         assertThat(top.score()).isGreaterThan(0.8);
-        if (run.pairs().size() > 1) {
-            assertThat(run.pairs().get(1).score()).isLessThan(0.7);   // 나머지는 서로 다른 풀이
-        }
+        // 기본 임계값(70%) 이상인 의심 쌍은 박서연-최지호 1개뿐이다 (이민준-박서연 66% 등은 같은 뼈대에서 시작한 풀이라 기준 미만)
+        assertThat(run.threshold()).isEqualTo(SimilarityService.DEFAULT_THRESHOLD);
+        assertThat(run.pairs()).hasSize(1);
         var view = similarityService.pair(top.id(), prof());
         assertThat(view.filesA().get(0).lines().stream().filter(SimilarityService.CodeLine::matched).count()).isGreaterThan(20);
     }
@@ -236,14 +236,14 @@ class DemoDataTest {
         assertThat(s1Audit.versionCount()).isEqualTo(2);
         assertThat(s1Audit.feedbackRatePercent()).isEqualTo(100);
         assertThat(s1Audit.contributionPercent()).isGreaterThan(30);
-        assertThat(s1Audit.branchStatus()).isEqualTo("브랜치 일치 ✔");
+        assertThat(s1Audit.branchStatus()).isEqualTo("브랜치 일치");
 
         // 최지호 (정상 균형 기여, 1회 제출, 불일치 브랜치 제출)
         var s3Audit = report.members().stream().filter(m -> m.loginId().equals("student3")).findFirst().orElseThrow();
         assertThat(s3Audit.branchName()).isEqualTo("feature/streamlit-ui");
         assertThat(s3Audit.versionCount()).isEqualTo(1);
         assertThat(s3Audit.score()).isEqualTo(85);
-        assertThat(s3Audit.branchStatus()).isEqualTo("브랜치 불일치 ✖");
+        assertThat(s3Audit.branchStatus()).isEqualTo("브랜치 불일치");
 
         // 정하은 (미제출 상태 - 활동 없음 감지)
         var s4Audit = report.members().stream().filter(m -> m.loginId().equals("student4")).findFirst().orElseThrow();

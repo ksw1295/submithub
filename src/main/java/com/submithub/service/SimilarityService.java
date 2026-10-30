@@ -24,12 +24,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 같은 과제의 학생별 최신 제출물을 쌍으로 비교해 유사도 순위를 만든다 (Winnowing, MOSS 방식).
+ * 같은 과제의 학생별 최신 제출물을 쌍으로 비교해 유사도 순위를 만든다 (Winnowing).
  * 교수가 올려둔 뼈대 코드는 비교에서 제외된다.
  */
 @Service
 public class SimilarityService {
 
+    /** 기본 의심 임계값 70%: docs/EVALUATION.md 실험(직접 만든 데이터셋)에서 F1 이 가장 높았던 값 (P 1.000 / R 0.988 / F1 0.994) */
     public static final double DEFAULT_THRESHOLD = 0.70;
 
     public record PairRow(Long id, Long submissionAId, Long submissionBId, String studentA, String studentB,

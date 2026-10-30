@@ -69,19 +69,19 @@ class TeamBranchStatusTest {
     void 제출한_ref_가_저장되고_팀원_브랜치와_같으면_브랜치_일치() {
         var r = gh("org/repo", "feature/m1", 1);
         assertThat(submissions.findById(r.id()).orElseThrow().getSourceRef()).isEqualTo("feature/m1");
-        assertThat(status()).isEqualTo("브랜치 일치 ✔");
+        assertThat(status()).isEqualTo("브랜치 일치");
     }
 
     @Test
     void 다른_브랜치로_냈으면_브랜치_불일치() {
         gh("org/repo", "main", 1);
-        assertThat(status()).isEqualTo("브랜치 불일치 ✖");
+        assertThat(status()).isEqualTo("브랜치 불일치");
     }
 
     @Test
     void 팀_저장소와_다른_저장소면_저장소_불일치() {
         gh("someone/else", "feature/m1", 1);
-        assertThat(status()).isEqualTo("저장소 불일치 ✖");
+        assertThat(status()).isEqualTo("저장소 불일치");
     }
 
     @Test
@@ -104,9 +104,9 @@ class TeamBranchStatusTest {
     @Test
     void 최신_제출을_기준으로_표시한다() {
         gh("org/repo", "main", 1);
-        assertThat(status()).isEqualTo("브랜치 불일치 ✖");
+        assertThat(status()).isEqualTo("브랜치 불일치");
         gh("org/repo", "feature/m1", 2);
-        assertThat(status()).isEqualTo("브랜치 일치 ✔");
+        assertThat(status()).isEqualTo("브랜치 일치");
     }
 
     @Test
@@ -116,7 +116,7 @@ class TeamBranchStatusTest {
 
         assertThat(result.versionNo()).isEqualTo(1);
         assertThat(submissions.findById(result.id()).orElseThrow().getSourceRef()).isEqualTo("feature/m1");
-        assertThat(status()).isEqualTo("브랜치 일치 ✔");
+        assertThat(status()).isEqualTo("브랜치 일치");
     }
 
     @Test

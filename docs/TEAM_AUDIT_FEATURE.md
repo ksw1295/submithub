@@ -120,7 +120,7 @@ $$C_i = \begin{cases} \text{round}\left( \frac{\text{ValidLoC}_i}{\sum_{k=1}^{N}
 ### 3.4. 브랜치 출처 검증 및 팀원 간 코드 중복 감지
 1. **저장소 및 출처 검증**:
    - 직접 파일 업로드 제출: `출처 미확인 (직접 업로드)`
-   - GitHub 연동 제출 시 팀 저장소(`team.repoUrl`)와 제출 저장소(`submission.sourceRepo`)를 비교해 `저장소 불일치 ✖`, 같으면 제출 때 입력한 브랜치(`submission.sourceRef`)를 팀원 `branchName` 과 비교해 `브랜치 일치 ✔` / `브랜치 불일치 ✖`
+   - GitHub 연동 제출 시 팀 저장소(`team.repoUrl`)와 제출 저장소(`submission.sourceRepo`)를 비교해 `저장소 불일치`, 같으면 제출 때 입력한 브랜치(`submission.sourceRef`)를 팀원 `branchName` 과 비교해 `브랜치 일치` / `브랜치 불일치`
    - SHA 로만 제출했거나 브랜치를 비워 기본 브랜치로 낸 경우, 이 컬럼 도입 전의 제출: `브랜치 확인 불가` (7~40자리 16진수 이름은 SHA 로 간주)
 2. **팀원 간 코드 중복 감지**:
    - `SimilarityChecker.compareAll()`을 사용하여 팀원 최신 제출물 간 유사도를 비교합니다.

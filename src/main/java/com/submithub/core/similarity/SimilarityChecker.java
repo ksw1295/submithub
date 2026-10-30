@@ -13,7 +13,7 @@ import java.util.TreeSet;
  * 같은 과제에 제출된 코드끼리 유사도를 계산한다.
  *
  * 교수가 나눠준 뼈대 코드(baseline)는 모두가 똑같이 갖고 있으므로 지문에서 미리 뺀다.
- * (MOSS 의 -b 옵션과 같은 역할)
+
  */
 public final class SimilarityChecker {
 

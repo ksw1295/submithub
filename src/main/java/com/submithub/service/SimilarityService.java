@@ -30,7 +30,7 @@ import java.util.Set;
 @Service
 public class SimilarityService {
 
-    public static final double DEFAULT_THRESHOLD = 0.65;
+    public static final double DEFAULT_THRESHOLD = 0.70;
 
     public record PairRow(Long id, Long submissionAId, Long submissionBId, String studentA, String studentB,
                           int versionA, int versionB, double score, double coverageA, double coverageB) {

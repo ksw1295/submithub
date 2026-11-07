@@ -208,49 +208,48 @@ erDiagram
     User ||--o{ Enrollment : "수강 신청 (학생)"
     Course ||--o{ Enrollment : "수강생 목록"
     Course ||--o{ Assignment : "과제 등록"
-    Course ||--o{ Team : "팀 구성"
+    Assignment ||--o{ Team : "과제 팀 구성"
+    User ||--o{ Team : "팀장 (leader)"
     Team ||--o{ TeamMember : "팀원 매핑"
+    Assignment ||--o{ TeamMember : "과제 기준 팀원"
     User ||--o{ TeamMember : "소속 학생"
 
     Assignment ||--o{ Submission : "제출 (버전 이력)"
-    User ||--o{ Submission : "제출자 (개인)"
-    Team ||--o{ Submission : "제출 팀 (조별과제)"
+    User ||--o{ Submission : "제출자 (학생)"
     Submission ||--o{ SubmissionFile : "포함 파일 목록"
-    Submission ||--o{ Grade : "교수 평가"
+    Submission ||--o| Grade : "교수 평가"
     User ||--o{ Grade : "채점 교수"
 
     SubmissionFile ||--o{ ReviewComment : "줄 단위 코멘트"
     User ||--o{ ReviewComment : "코멘트 작성자"
     ReviewComment ||--o{ ReviewComment : "답글 (Parent-Child 계층)"
 
-    Assignment ||--o{ GradingConfig : "채점 환경 설정"
+    Assignment ||--o| GradingConfig : "채점 환경 설정"
     Assignment ||--o{ GradingTestCase : "테스트 케이스"
-    Submission ||--o{ GradingRun : "채점 실행 기록"
+    Submission ||--o| GradingRun : "채점 실행 기록"
     GradingRun ||--o{ GradingResult : "케이스별 통과 결과"
 
     Assignment ||--o{ SimilarityRun : "표절 검사 실행"
     SimilarityRun ||--o{ SimilarityPair : "표절 의심 쌍 결과"
 
-    ReviewComment ||--o| AiJudgement : "AI 반영 여부 심층 판정"
-    User ||--o{ AiDailyUsage : "일일 AI 호출 한도"
+    ReviewComment ||--o{ AiJudgement : "AI 반영 여부 심층 판정"
 ```
 
 ### 3.1. 핵심 엔티티 명세 및 무결성 제약조건
 
 1. **Submission (제출물)**:
-   - `assignment_id` + `student_id` (또는 `team_id`) + `version_no` 복합 고유 키(`UK`)로 동시 제출 시 중복 버전 생성을 DB 수준에서 차단.
-   - `git_commit_sha`, `git_commit_msg`, `git_commit_url`: GitHub 연동 제출 시 커밋 메타데이터를 저장하여 재현성 보장.
+   - `assignment_id` + `student_id` + `version_no` 복합 고유 키(`uq_submission_version`)로 동시 제출 시 중복 버전 생성을 DB 수준에서 차단.
+   - `source_repo`, `source_commit`, `source_ref`: GitHub 연동 제출 시 저장소·커밋 SHA·브랜치 메타데이터를 저장하여 재현성 보장.
 2. **SubmissionFile (제출 파일)**:
-   - `submission_id` + `path` 고유 제약.
-   - `file_hash`: SHA-256 해시를 기록하여 파일 무결성 및 변경 여부를 $O(1)$로 검증.
-   - `content_text`: 텍스트 소스코드 원문 (바이너리 파일은 스토리지 파일시스템에만 보존).
+   - `submission_id` + `path` 매핑 및 `sha256` 해시를 기록하여 파일 무결성 및 변경 여부를 $O(1)$로 검증.
+   - `content_text`: 텍스트 소스코드 원문 (원본 바이너리는 UUID 기반 스토리지 파일시스템에 보존).
 3. **ReviewComment (줄 피드백 코멘트)**:
    - `start_line`, `end_line`: 피드백 대상 라인 범위 (단일 라인 및 복수 라인 지원).
    - `parent_id`: 교수 코멘트와 학생/교수 답글을 Self-referencing 계층 구조로 매핑.
    - `resolved_by_student`: 학생의 자율 "수정 완료" 플래그 (LineTracker 자동 판정과 상호 교차 검증).
 4. **Team & TeamMember (조별과제 도메인)**:
-   - 과제 단위가 아닌 강의 단위로 팀을 구성하여 재사용 가능.
-   - 팀장(`LEADER`)과 팀원(`MEMBER`) 역할 부여, 조별과제 제출 시 모든 팀원이 동일 제출물 공유.
+   - 과제(`Assignment`) 단위로 팀을 구성하며, `Team.leader_id`와 `repo_url`을 관리.
+   - `TeamMember`는 `(assignment_id, student_id)` 복합 고유키로 중복 팀 합류를 방지하고, 개인별 담당 브랜치(`branch_name`)와 역할(`role_title`)을 기록하여 기여도 감사에 활용.
 
 ---
 

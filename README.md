@@ -157,30 +157,30 @@ erDiagram
     User ||--o{ Enrollment : "수강 (학생)"
     Course ||--o{ Enrollment : "수강생"
     Course ||--o{ Assignment : "과제"
-    Course ||--o{ Team : "팀"
-    Team ||--o{ TeamMember : "팀원"
+    Assignment ||--o{ Team : "과제 팀 구성"
+    User ||--o{ Team : "팀장 (leader)"
+    Team ||--o{ TeamMember : "소속 팀원"
+    Assignment ||--o{ TeamMember : "과제 기준 팀원"
     User ||--o{ TeamMember : "소속 학생"
 
     Assignment ||--o{ Submission : "제출"
-    User ||--o{ Submission : "개인 제출자"
-    Team ||--o{ Submission : "팀 제출자"
+    User ||--o{ Submission : "제출자 (student)"
     Submission ||--o{ SubmissionFile : "파일 목록"
-    Submission ||--o{ Grade : "점수/총평"
+    Submission ||--o| Grade : "점수/총평"
 
     SubmissionFile ||--o{ ReviewComment : "줄 코멘트"
     User ||--o{ ReviewComment : "작성자"
     ReviewComment ||--o{ ReviewComment : "답글 (Parent-Child)"
 
-    Assignment ||--o{ GradingConfig : "채점 설정"
+    Assignment ||--o| GradingConfig : "채점 설정"
     Assignment ||--o{ GradingTestCase : "테스트 케이스"
-    Submission ||--o{ GradingRun : "채점 실행"
+    Submission ||--o| GradingRun : "채점 실행"
     GradingRun ||--o{ GradingResult : "케이스별 결과"
 
     Assignment ||--o{ SimilarityRun : "표절 검사"
     SimilarityRun ||--o{ SimilarityPair : "의심 쌍"
 
-    ReviewComment ||--o| AiJudgement : "AI 판정"
-    User ||--o{ AiDailyUsage : "일일 AI 쿼터"
+    ReviewComment ||--o{ AiJudgement : "AI 판정"
 ```
 
 - **불변 제출 모델 (`@Immutable`)**: 제출(`Submission`, `SubmissionFile`)은 오직 `INSERT`만 발생하며, 이전 버전을 수정하거나 덮어쓰지 않습니다.

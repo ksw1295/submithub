@@ -28,19 +28,29 @@ services:
     networks:
       - internal
 
+  # ============================================================================
+  # Docker Socket Proxy: 최소 권한 보안 격리 프록시 (Least-Privilege Security Proxy)
+  # ----------------------------------------------------------------------------
+  # 호스트 Docker 소켓 직접 마운트 시 발생하는 루트 권한 탈취(Container Escape) 방어:
+  # - 호스트 /var/run/docker.sock 은 socket-proxy 에만 읽기 전용(:ro) 마운트
+  # - 채점에 필수적인 컨테이너 생성/실행 API만 허용 (CONTAINERS=1, POST=1)
+  # - 호스트 볼륨 생성(VOLUMES=0), 이미지 빌드(BUILD=0), 네트워크 조작(NETWORKS=0),
+  #   실행 중 컨테이너 명령 주입(EXEC=0), Docker Secret 조회(SECRETS=0) 완전 차단
+  # - 외부 포트 노출 없이 내부 가상 브릿지 네트워크(internal) 내에서만 통신
+  # ============================================================================
   socket-proxy:
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      # 채점용 컨테이너 실행(docker run, docker rm)에 필요한 API만 최소 허용
+      # [허용] 채점용 컨테이너 라이프사이클 제어 (create, start, wait, remove, logs)
       - CONTAINERS=1
       - POST=1
       - INFO=1
       - VERSION=1
       - PING=1
-      # 위험하거나 불필요한 Docker API 차단
+      # [차단] 호스트 파일시스템 침투 및 관리자 권한 악용 원천 차단
       - BUILD=0
       - COMMIT=0
       - CONFIGS=0

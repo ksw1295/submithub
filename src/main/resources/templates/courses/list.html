@@ -51,7 +51,7 @@
                                     <span th:if="${a.hoursLeft >= 0}" th:text="'(' + ${a.hoursLeft} + '시간 남음)'"></span>
                                 </span>
                             </div>
-                            <span class="btn btn-sm btn-danger text-nowrap py-1 px-2" style="font-size: 12.5px;" th:text="${a.versions > 0} ? '추가 제출 &rarr;' : '제출하기 &rarr;'">제출하기 &rarr;</span>
+                            <span class="btn btn-sm btn-danger text-nowrap py-1 px-2" style="font-size: 12.5px;" th:text="${a.myVersions > 0} ? '추가 제출 →' : '제출하기 →'">제출하기 →</span>
                         </a>
                     </div>
                 </div>

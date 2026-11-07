@@ -84,7 +84,9 @@ class PagesRenderTest {
     @Test
     void 학생_화면들이_렌더링된다() throws Exception {
         var s = user(stu);
-        assertThat(body(s, "/courses")).contains("자료구조");
+        // 마감 48시간 이내 미제출 과제가 있을 때 /courses 의 마감 임박 탭도 오류 없이 렌더링되는지 확인
+        data.assignment(course, prof, Duration.ofHours(12), true, null);
+        assertThat(body(s, "/courses")).contains("자료구조").contains("마감 임박").contains("제출하기 →");
         String course = body(s, "/courses/" + this.course.getId());
         assertThat(course).doesNotContain(this.course.getInviteCode()).contains("제출 완료");
         assertThat(body(s, "/assignments/" + assignment.getId())).contains("제출하기").contains("내 제출 이력");

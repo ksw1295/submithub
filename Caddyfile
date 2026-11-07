@@ -1,33 +1,43 @@
-# SubmitHub Production Caddyfile
-# Caddy가 {$DOMAIN} 도메인으로 Let's Encrypt / ZeroSSL 인증서를 자동 발급받습니다.
+# ============================================================================
+# SubmitHub Production Caddyfile: 리버스 프록시 및 자동 TLS 보안 설정
+# ----------------------------------------------------------------------------
+# 1. 자동 HTTPS: Let's Encrypt / ZeroSSL 인증서 자동 발급, 갱신 및 HTTPS 리다이렉트
+# 2. 내부 엔드포인트 차단: /actuator/health 외의 민감한 Actuator 경로(env, beans, metrics 등) 403 차단
+# 3. 보안 헤더: HSTS (1년), nosniff (MIME 스니핑 방어), DENY (클릭재킹 방어)
+# 4. 전송 최적화: 최신 Zstandard(zstd) 및 Gzip 이중 압축 전송
+# ============================================================================
 
 {$DOMAIN} {
-    # /actuator/* 경로 중 /actuator/health 외의 모든 내부 모니터링 주소는 외부 접근 차단
+    # [보안 제어] /actuator/* 경로 중 /actuator/health 외의 모든 내부 모니터링 주소는 외부 접근 차단 (403 Forbidden)
     @actuator_blocked {
         path /actuator/*
         not path /actuator/health
     }
     respond @actuator_blocked 403
 
-    # Spring Boot 앱으로 역방향 프록시
-    # Spring Boot Actuator의 show-details: never 설정과 함께 /actuator/health 는 status 만 노출됨
+    # [역방향 프록시] 내부 격리 네트워크의 Spring Boot 앱(app:8080)으로 전달
+    # 클라이언트 실제 IP(X-Forwarded-For)와 프로토콜(X-Forwarded-Proto) 보존
     reverse_proxy app:8080 {
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
     }
 
-    # 압축 전송 (Zstandard, Gzip)
+    # [고성능 압축 전송] Zstandard 우선 적용 후 Gzip 폴백 (네트워크 대역폭 절감 및 TTFB 개선)
     encode zstd gzip
 
-    # 보안 헤더
+    # [보안 헤더 주입]
     header {
+        # HSTS: 1년간 HTTPS 접속 강제 및 프리로드 (SSL Stripping 방어)
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # MIME 타입 스니핑 방지 (XSS 및 실행 파일 위장 방어)
         X-Content-Type-Options "nosniff"
+        # 클릭재킹(Clickjacking) 방지: iframe 삽입 전면 금지
         X-Frame-Options "DENY"
+        # 리퍼러 정책: HTTPS -> HTTP 유출 차단 및 민감 파라미터 보호
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 
-    # 표준 로그
+    # 표준 로그 (stdout 으로 출력되어 Docker 로그 수집기에 통합)
     log {
         output stdout
         format console
